@@ -1,0 +1,709 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedidos Piper Pol</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--tinta:#12261c;--verde:#1f6b45;--verde-claro:#2fa871;--bordo:#8e2438;--papel:#f6f4ec;--blanco:#fff;--linea:#ddd8c8;--gris:#6d6f68;--amarillo:#c9c22a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--papel);color:var(--tinta);font-family:"Inter","Helvetica Neue",Arial,sans-serif;font-size:15px}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;margin:0}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+header{background:var(--verde);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:30}
+.marca{font-family:Georgia,serif;font-size:21px;letter-spacing:.5px}
+.marca span{color:var(--amarillo)}
+.lema{font-size:11px;opacity:.8;letter-spacing:1.5px;text-transform:uppercase}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:transparent;border:1px solid transparent;color:rgba(255,255,255,.75);padding:8px 13px;border-radius:999px}
+nav button:hover{color:#fff;background:rgba(255,255,255,.12)}
+nav button.on{background:#fff;color:var(--verde);font-weight:600}
+.acciones{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid transparent;border-radius:999px;padding:9px 16px;background:#fff;color:var(--verde);font-weight:600}
+.btn:hover{background:var(--papel)}
+.btn.fantasma{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.btn.fantasma:hover{background:rgba(255,255,255,.12)}
+.btn.chico{padding:6px 12px;font-size:13px}
+.btn.linea{background:transparent;color:var(--verde);border-color:var(--linea)}
+.btn.rojo{background:transparent;color:var(--bordo);border-color:var(--linea)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,nav button:focus-visible{outline:3px solid var(--amarillo);outline-offset:2px}
+.alerta{background:#fff3cd;border-bottom:1px solid #e0d5a8;color:#6b5a12;padding:10px 18px;font-size:13px;display:none}
+.alerta.ver{display:block}
+.contenedor{display:flex;align-items:flex-start;gap:20px;padding:20px;max-width:1400px;margin:0 auto}
+.panel{flex:1 1 560px;min-width:0}
+aside{flex:0 0 380px;position:sticky;top:70px;background:var(--blanco);border:1px solid var(--linea);border-radius:14px;overflow:hidden}
+.pagina{max-width:1400px;margin:0 auto;padding:20px}
+.oculto{display:none!important}
+.tarjeta{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:16px;margin-bottom:18px}
+.tarjeta h2{font-size:18px;margin-bottom:4px}
+.tarjeta .sub{color:var(--gris);font-size:13px;margin:0 0 14px}
+.campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);margin-bottom:4px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--linea);border-radius:8px;background:#fff}
+textarea{resize:vertical;min-height:58px}
+.fila-sup{display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap}
+.fila-sup > div:first-child{flex:1 1 260px}
+.buscador{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.buscador input{flex:1 1 240px}
+.buscador select{flex:0 1 260px}
+.rubro{margin-bottom:22px}
+.rubro > h3{font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--verde);border-bottom:2px solid var(--verde);padding-bottom:6px;margin-bottom:4px;font-family:Inter,Arial,sans-serif;font-weight:700}
+.rubro .presentacion{font-size:12px;color:var(--gris);margin:6px 0 10px}
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px}
+.item{display:flex;align-items:center;gap:10px;background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:8px 10px}
+.item.activo{border-color:var(--verde-claro);box-shadow:inset 4px 0 0 var(--verde-claro)}
+.item .nombre{flex:1;min-width:0;line-height:1.25}
+.item .nombre small{display:block;color:var(--gris);font-size:11px}
+.cant{display:flex;align-items:center;gap:4px}
+.cant button{width:30px;height:30px;border-radius:8px;border:1px solid var(--linea);background:var(--papel);font-weight:700;color:var(--verde);line-height:1}
+.cant button:hover{background:var(--verde);color:#fff;border-color:var(--verde)}
+.cant input{width:52px;text-align:center;padding:6px 4px}
+aside h2{font-size:18px;padding:14px 16px;border-bottom:1px solid var(--linea)}
+.resumen{max-height:38vh;overflow:auto;padding:6px 0}
+.linea{display:flex;gap:10px;padding:8px 16px;border-bottom:1px dashed var(--linea);align-items:flex-start}
+.linea .txt{flex:1;min-width:0}
+.linea .txt small{display:block;color:var(--gris);font-size:11px}
+.linea .qty{font-weight:700;color:var(--verde)}
+.linea .plata{font-variant-numeric:tabular-nums;font-size:13px}
+.linea .quitar{border:none;background:none;color:var(--bordo);font-size:18px;line-height:1;padding:0 2px}
+.vacio{padding:24px 16px;color:var(--gris);text-align:center;font-size:14px}
+.pie{padding:14px 16px;border-top:1px solid var(--linea);background:var(--papel)}
+.tot{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.tot.grande{font-weight:700;font-size:16px;margin:8px 0 12px;padding-top:8px;border-top:1px solid var(--linea)}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gris);margin-bottom:10px}
+.chk input{width:auto}
+.pie .btn{width:100%;margin-bottom:8px}
+.pie .btn.princ{background:var(--verde);color:#fff}
+.pie .btn.princ:hover{background:var(--tinta)}
+table{width:100%;border-collapse:collapse;background:var(--blanco);border:1px solid var(--linea);border-radius:12px;overflow:hidden}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);padding:10px 12px;border-bottom:1px solid var(--linea);background:var(--papel)}
+td{padding:10px 12px;border-bottom:1px solid var(--linea);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.acc{white-space:nowrap;text-align:right}
+td.acc button{margin-left:4px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.03em}
+.pill.pend{background:#fdece9;color:#a3341c}
+.pill.parc{background:#fdf5d6;color:#7a6410}
+.pill.cob{background:#e3f3e9;color:var(--verde)}
+.tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:14px 16px}
+.kpi .et{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);margin-bottom:6px}
+.kpi .nu{font-family:Georgia,serif;font-size:25px;font-variant-numeric:tabular-nums}
+.kpi.destaca{background:var(--verde);border-color:var(--verde);color:#fff}
+.kpi.destaca .et{color:rgba(255,255,255,.75)}
+dialog{border:none;border-radius:16px;padding:0;max-width:440px;width:92%;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(18,38,28,.45)}
+.dlg-cab{padding:16px;border-bottom:1px solid var(--linea)}
+.dlg-cab h3{font-size:18px}
+.dlg-cab p{margin:4px 0 0;color:var(--gris);font-size:13px}
+.dlg-cuerpo{padding:16px;max-height:52vh;overflow:auto}
+.dlg-pie{padding:14px 16px;border-top:1px solid var(--linea);background:var(--papel);display:flex;gap:8px;justify-content:flex-end}
+.pago{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--linea);font-size:14px}
+.precio-fila{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--linea)}
+.precio-fila .n{flex:1;min-width:0}
+.precio-fila .n small{display:block;color:var(--gris);font-size:11px}
+.precio-fila input{width:130px;text-align:right}
+.aviso{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:11px 20px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
+.aviso.ver{opacity:1}
+@media (max-width:900px){
+  .contenedor{flex-direction:column;padding:14px}
+  aside{position:static;width:100%;flex-basis:auto}
+  nav{width:100%;margin:6px 0 0;order:3}
+  nav button{flex:1 1 auto}
+  table,thead,tbody,tr,td,th{display:block}
+  thead{display:none}
+  tr{border-bottom:1px solid var(--linea);padding:6px 0}
+  td{border:none;padding:4px 12px}
+  td.num,td.acc{text-align:left}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header>
+  <div>
+    <div class="marca">PIPER <span>POL</span></div>
+    <div class="lema">Toma de pedidos</div>
+  </div>
+  <nav>
+    <button id="tab-pedido" class="on" onclick="ver('pedido')">Nuevo pedido</button>
+    <button id="tab-clientes" onclick="ver('clientes')">Clientes</button>
+    <button id="tab-historial" onclick="ver('historial')">Historial</button>
+    <button id="tab-precios" onclick="ver('precios')">Precios</button>
+    <button id="tab-numeros" onclick="ver('numeros')">Mis números</button>
+  </nav>
+  <div class="acciones">
+    <button class="btn fantasma" onclick="respaldar()">Descargar copia</button>
+    <button class="btn fantasma" onclick="document.getElementById('archivo').click()">Restaurar copia</button>
+    <input type="file" id="archivo" accept=".json" class="oculto" onchange="restaurar(this)">
+  </div>
+</header>
+
+<div class="alerta" id="alerta">Este navegador no está guardando los datos (modo privado o permisos bloqueados). Podés trabajar igual, pero descargá el Excel antes de cerrar.</div>
+
+<!-- ============ NUEVO PEDIDO ============ -->
+<div id="v-pedido">
+<div class="contenedor">
+  <div class="panel">
+    <div class="tarjeta">
+      <h2>Datos del pedido</h2>
+      <p class="sub">Elegí un cliente guardado o cargá uno nuevo.</p>
+      <div class="fila-sup">
+        <div><label for="selCliente">Cliente guardado</label><select id="selCliente" onchange="cargarCliente(this.value)"></select></div>
+        <button class="btn chico linea" onclick="nuevoCliente()">Cliente nuevo</button>
+      </div>
+      <div class="campos">
+        <div><label for="cliente">Nombre o razón social</label><input id="cliente" placeholder="Farmacia San Martín"></div>
+        <div><label for="tel">Teléfono</label><input id="tel" placeholder="(0351) ..."></div>
+        <div><label for="localidad">Localidad</label><input id="localidad" placeholder="Ciudad / provincia"></div>
+        <div><label for="vendedor">Vendedor</label><input id="vendedor" placeholder="Quién toma el pedido"></div>
+        <div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
+        <div><label for="entrega">Entrega</label><select id="entrega"><option>Retira en depósito</option><option>Envío por transporte</option><option>Reparto propio</option></select></div>
+      </div>
+      <div style="margin-top:10px"><label for="obs">Observaciones</label><textarea id="obs" placeholder="Aclaraciones para preparar el pedido"></textarea></div>
+    </div>
+    <div class="buscador">
+      <input id="q" placeholder="Buscar producto (ej: digestivo, boldo, stevia)" oninput="pintar()">
+      <select id="rubro" onchange="pintar()"></select>
+    </div>
+    <div id="catalogo"></div>
+  </div>
+
+  <aside>
+    <h2>Pedido <span id="conteo" style="font-weight:400;color:var(--gris);font-size:14px"></span></h2>
+    <div class="resumen" id="resumen"></div>
+    <div class="pie">
+      <div class="tot"><span>Unidades</span><span id="bultos">0</span></div>
+      <div class="tot"><span>Neto</span><span id="tNeto">—</span></div>
+      <div class="tot"><span>IVA <span id="etIva">21%</span></span><span id="tIva">—</span></div>
+      <div class="tot grande"><span>Total</span><span id="tTotal">—</span></div>
+      <label class="chk"><input type="checkbox" id="conPrecios" checked> Incluir precios en el Excel</label>
+      <button class="btn princ" onclick="guardarPedido()">Guardar pedido</button>
+      <button class="btn linea" onclick="exportarActual()">Descargar Excel</button>
+      <button class="btn rojo" onclick="limpiar()">Vaciar pedido</button>
+    </div>
+  </aside>
+</div>
+</div>
+
+<!-- ============ CLIENTES ============ -->
+<div id="v-clientes" class="pagina oculto">
+  <div class="tarjeta">
+    <h2>Clientes</h2>
+    <p class="sub">Se guardan solos cada vez que guardás un pedido.</p>
+    <div id="tablaClientes"></div>
+  </div>
+</div>
+
+<!-- ============ HISTORIAL ============ -->
+<div id="v-historial" class="pagina oculto">
+  <div class="tarjeta">
+    <h2>Historial de pedidos</h2>
+    <p class="sub">Volvé a bajar el Excel, repetí un pedido o registrá los cobros.</p>
+    <div id="tablaHistorial"></div>
+  </div>
+</div>
+
+<!-- ============ PRECIOS ============ -->
+<div id="v-precios" class="pagina oculto">
+  <div class="tarjeta">
+    <h2>Lista de precios</h2>
+    <p class="sub">Los precios se guardan solo en este dispositivo: no viajan en el archivo publicado.</p>
+    <div class="campos" style="margin-bottom:14px">
+      <div><label for="cfgIva">IVA a aplicar (%)</label><input id="cfgIva" type="number" min="0" step="0.5" onchange="guardarConfig()"></div>
+      <div><label for="cfgTipo">Los precios que cargo son</label>
+        <select id="cfgTipo" onchange="guardarConfig()">
+          <option value="neto">Netos, sin IVA</option>
+          <option value="bruto">Finales, con IVA incluido</option>
+        </select>
+      </div>
+    </div>
+    <div class="fila-sup">
+      <button class="btn chico linea" onclick="plantillaPrecios()">Descargar plantilla en Excel</button>
+      <button class="btn chico linea" onclick="document.getElementById('archPrecios').click()">Cargar plantilla completada</button>
+      <input type="file" id="archPrecios" accept=".csv" class="oculto" onchange="importarPrecios(this)">
+      <button class="btn chico rojo" onclick="borrarPrecios()">Borrar todos</button>
+    </div>
+    <div class="buscador" style="margin-top:14px">
+      <input id="qp" placeholder="Buscar producto para cargar su precio" oninput="pintarPrecios()">
+      <select id="rubroP" onchange="pintarPrecios()"></select>
+    </div>
+    <div id="listaPrecios"></div>
+  </div>
+</div>
+
+<!-- ============ MIS NÚMEROS ============ -->
+<div id="v-numeros" class="pagina oculto">
+  <div class="tarjeta">
+    <h2>Mis números</h2>
+    <p class="sub">Esta pantalla es tuya. Nada de lo que ves acá sale en el Excel del pedido.</p>
+    <div class="campos" style="margin-bottom:16px">
+      <div><label for="cfgCom">Mi comisión (%)</label><input id="cfgCom" type="number" min="0" step="0.5" onchange="guardarConfig()"></div>
+      <div><label for="filtroMes">Período</label><select id="filtroMes" onchange="pintarNumeros()"></select></div>
+    </div>
+    <div class="tarjetas" id="kpis"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn chico linea" onclick="excelLiquidacion()">Descargar mi liquidación</button>
+    </div>
+    <div id="tablaNumeros"></div>
+  </div>
+</div>
+
+<!-- ============ COBROS ============ -->
+<dialog id="dlgPagos">
+  <div class="dlg-cab"><h3 id="dlgTit">Cobros</h3><p id="dlgSub"></p></div>
+  <div class="dlg-cuerpo">
+    <div id="listaPagos"></div>
+    <div class="campos" style="margin-top:14px">
+      <div><label for="pagoMonto">Monto cobrado</label><input id="pagoMonto" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      <div><label for="pagoFecha">Fecha</label><input id="pagoFecha" type="date"></div>
+    </div>
+    <button class="btn linea chico" style="margin-top:10px" onclick="agregarPago()">Registrar cobro</button>
+    <button class="btn linea chico" style="margin-top:10px" onclick="saldarTodo()">Cobrado por completo</button>
+  </div>
+  <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
+</dialog>
+
+<div class="aviso" id="aviso"></div>
+
+<script>
+/* ================= catálogo ================= */
+const CATALOGO=[
+ {rubro:"Tisanas en gotas",pres:"Frasco de 100 cc",caja:"Caja cerrada: 20 frascos",items:["Antiinflamatorio","Antiséptico urinario","Antiséptico vías respiratorias","Colagogo","Depurativo","Diabetes","Digestivo","Diurético","Energizante natural","Laxante","Piper hepat","Reductora","Sedante","Vigorizante sexual natural"]},
+ {rubro:"Tisanas en hebras",pres:"Bolsita de 70 gr",caja:"",items:["Antigripal","Antiinflamatorio","Antiparasitario","Antiséptico vías respiratorias","Antiséptico urinario","Arterial","Colagogo","Depurativo","Diabetes","Digestivo","Diurético","Energizante natural","Laxante","Ovárica","Próstata","Reductor de colesterol","Reductora","Sedante","Várices","Vigorizante sexual natural"]},
+ {rubro:"Tisanas en saquitos",pres:"Estuche de 25 saquitos x 1,5 gr",caja:"Caja cerrada: 12 estuches",items:["Reductora","Sedante","Digestivo","Colagogo","Laxante","Diurético","Diabetes"]},
+ {rubro:"Monohierbas en gotas",pres:"Frasco de 100 cc",caja:"Caja cerrada: 20 frascos",items:["Árnica","Café verde","Cardo mariano","Carqueja","Castaña de India","Centella asiática","Cola de caballo","Diente de león","Equinácea","Ginkgo biloba","Hamamelis","Hipérico","Pasionaria","Rompiedra","Saw palmeto","Sombra de toro","Spirulina","Uña de gato","Uva ursi","Valeriana"]},
+ {rubro:"Monohierbas en hebras",pres:"Bolsita fraccionada",caja:"",items:["Alcachofa","Alfirelillo","Ambay","Anís estrellado","Anís verde","Boldo","Borraja","Café verde","Cardo mariano","Canchalagua","Carqueja","Cáscara sagrada","Castaño de Indias","Cedrón","Centella asiática","Chañar corteza","Chía","Cola de caballo","Cola de quirquincho","Congorosa","Contrayerba","Cuasia amarga","Doradilla","Eneldo","Espina colorada","Estigma de maíz","Eucaliptus","Fucus","Ginkgo biloba","Hinojo","Hipérico","Hisopo","Incayuyo","Incienso","Jarilla","Lapacho","Lino","Llantén","Malva","Manzanilla","Marrubio","Melisa","Menta","Mirra","Ortiga","Palo azul","Palo pichi","Pasionaria","Peperina","Pezuña de vaca","Poleo","Romero","Rompepiedra","Ruda","Salvia blanca","Sarandí","Sen hojas","Sombra de toro","Stevia","Té verde","Té rojo","Té de burro","Tilo","Uña de gato","Uva ursi","Valeriana","Yerba carnicera","Yerba de la piedra","Yerba de pollo","Yerba meona","Zarzaparrilla"]},
+ {rubro:"Edulcorantes",pres:"Frasco",caja:"",items:[{n:"Stevia x 100 cc",p:"Frasco de 100 cc"},{n:"Stevia x 200 cc",p:"Frasco de 200 cc"},{n:"Edulcorante Diet",p:"Frasco de 200 cc"},{n:"Stevia 100%",p:"Frasco de 200 cc"}]},
+ {rubro:"Té en saquitos",pres:"Estuche de 25 saquitos x 2 gr",caja:"Caja cerrada: 12 estuches",items:["Té rojo","Té verde"]},
+ {rubro:"Infusiones en saquitos",pres:"Estuche de 25 saquitos",caja:"Caja cerrada: 12 estuches",items:[{n:"Boldo",p:"Estuche de 25 saquitos x 1,5 gr"},{n:"Cedrón",p:"Estuche de 25 saquitos x 1 gr"},{n:"Manzanilla",p:"Estuche de 25 saquitos x 1 gr"},{n:"Jengibre con limón",p:"Estuche de 25 saquitos x 2 gr"},{n:"Tilo",p:"Estuche de 25 saquitos x 1 gr"},{n:"Menta",p:"Estuche de 25 saquitos x 1,5 gr"},{n:"Yerba compuesta",p:"Estuche de 25 saquitos x 2 gr"}]},
+ {rubro:"Yerba mate compuesta",pres:"Paquete de 500 gr",caja:"Caja cerrada: 12 paquetes",items:["Piper Pol con hierbas serranas","Piper Pol naranja-limón","Piper Pol con jengibre","Piper Pol con boldo"]},
+ {rubro:"Valle Verde",pres:"Paquete de 500 gr",caja:"",items:[{n:"Hierbas serranas con yerba mate",p:"Paquete de 500 gr"},{n:"Té en saquitos",p:"Estuche de 25 saquitos x 2 gr"}]}
+];
+const PRODUCTOS=[];
+CATALOGO.forEach((g,gi)=>g.items.forEach((it,ii)=>{
+  PRODUCTOS.push({id:gi+"-"+ii,rubro:g.rubro,nombre:typeof it==="string"?it:it.n,pres:typeof it==="string"?g.pres:it.p});
+}));
+const porId=id=>PRODUCTOS.find(p=>p.id===id);
+
+/* ================= guardado ================= */
+const CLAVE="piperpol_datos_v2";
+let DB={clientes:[],pedidos:[],precios:{},config:{comision:15,iva:21,tipo:"neto"}};
+let guardaOk=true;
+const store={
+  async leer(){
+    if(window.storage){try{const r=await window.storage.get(CLAVE);return r?JSON.parse(r.value):null}catch(e){return null}}
+    try{const v=localStorage.getItem(CLAVE);return v?JSON.parse(v):null}catch(e){guardaOk=false;return null}
+  },
+  async escribir(d){
+    if(window.storage){try{await window.storage.set(CLAVE,JSON.stringify(d));return true}catch(e){}}
+    try{localStorage.setItem(CLAVE,JSON.stringify(d));return true}catch(e){guardaOk=false;return false}
+  }
+};
+async function persistir(){
+  const ok=await store.escribir(DB);
+  document.getElementById("alerta").classList.toggle("ver",!ok);
+}
+
+/* ================= utilidades ================= */
+const pedido={};
+let clienteActivo=null, pedidoEnPagos=null;
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const val=id=>document.getElementById(id).value.trim();
+const set=(id,v)=>document.getElementById(id).value=v||"";
+const num=n=>(n||0).toLocaleString("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const plata=n=>"$ "+num(n);
+const factorIva=()=>1+(DB.config.iva||0)/100;
+/* precio neto unitario de un producto, según cómo se cargó la lista */
+function netoUnit(id){
+  const p=DB.precios[id];
+  if(!p)return 0;
+  return DB.config.tipo==="bruto"? p/factorIva() : p;
+}
+const hayPrecios=()=>Object.keys(DB.precios).length>0;
+function avisar(t){const a=document.getElementById("aviso");a.textContent=t;a.classList.add("ver");clearTimeout(a._t);a._t=setTimeout(()=>a.classList.remove("ver"),2600)}
+
+function ver(p){
+  ["pedido","clientes","historial","precios","numeros"].forEach(x=>{
+    document.getElementById("v-"+x).classList.toggle("oculto",x!==p);
+    document.getElementById("tab-"+x).classList.toggle("on",x===p);
+  });
+  if(p==="clientes")pintarClientes();
+  if(p==="historial")pintarHistorial();
+  if(p==="precios")pintarPrecios();
+  if(p==="numeros")pintarNumeros();
+}
+
+/* ================= catálogo / pedido ================= */
+const selRubro=document.getElementById("rubro"), selRubroP=document.getElementById("rubroP");
+const opcionesRubro='<option value="">Todos los rubros</option>'+CATALOGO.map(g=>`<option>${g.rubro}</option>`).join("");
+selRubro.innerHTML=opcionesRubro; selRubroP.innerHTML=opcionesRubro;
+document.getElementById("fecha").valueAsDate=new Date();
+
+function pintar(){
+  const q=norm(val("q")),r=selRubro.value;let html="";
+  CATALOGO.forEach(g=>{
+    if(r&&g.rubro!==r)return;
+    const vis=PRODUCTOS.filter(p=>p.rubro===g.rubro&&(!q||norm(p.nombre).includes(q)||norm(p.rubro).includes(q)));
+    if(!vis.length)return;
+    html+=`<section class="rubro"><h3>${g.rubro}</h3><div class="presentacion">Se pide por <strong>${g.pres.toLowerCase()}</strong>${g.caja?" · "+g.caja+" (referencia)":""}</div><div class="lista">`;
+    vis.forEach(p=>{const c=pedido[p.id]||0, pr=DB.precios[p.id];
+      html+=`<div class="item ${c?"activo":""}"><div class="nombre">${esc(p.nombre)}${pr?`<small>${plata(netoUnit(p.id))} + IVA</small>`:""}</div><div class="cant">
+        <button aria-label="Quitar uno de ${esc(p.nombre)}" onclick="sumar('${p.id}',-1)">−</button>
+        <input type="number" min="0" value="${c}" aria-label="Cantidad de ${esc(p.nombre)}" onchange="fijar('${p.id}',this.value)">
+        <button aria-label="Agregar uno de ${esc(p.nombre)}" onclick="sumar('${p.id}',1)">+</button></div></div>`;
+    });
+    html+="</div></section>";
+  });
+  document.getElementById("catalogo").innerHTML=html||`<div class="vacio">No hay productos que coincidan con la búsqueda.</div>`;
+  pintarResumen();
+}
+function pintarResumen(){
+  const l=PRODUCTOS.filter(p=>pedido[p.id]>0);
+  document.getElementById("resumen").innerHTML=l.length?l.map(p=>{
+    const st=netoUnit(p.id)*pedido[p.id];
+    return `<div class="linea"><span class="qty">${pedido[p.id]}×</span>
+      <div class="txt">${esc(p.nombre)}<small>${p.pres}</small></div>
+      ${st?`<span class="plata">${plata(st)}</span>`:""}
+      <button class="quitar" aria-label="Quitar ${esc(p.nombre)}" onclick="fijar('${p.id}',0)">×</button></div>`}).join("")
+    :`<div class="vacio">Todavía no cargaste productos. Buscá arriba y tocá +.</div>`;
+  document.getElementById("bultos").textContent=l.reduce((a,p)=>a+pedido[p.id],0);
+  document.getElementById("conteo").textContent=l.length?`· ${l.length} ítems`:"";
+  const t=totalesDe(lineasActuales());
+  document.getElementById("etIva").textContent=(DB.config.iva||0)+"%";
+  const hay=hayPrecios()&&t.neto>0;
+  document.getElementById("tNeto").textContent=hay?plata(t.neto):"—";
+  document.getElementById("tIva").textContent=hay?plata(t.iva):"—";
+  document.getElementById("tTotal").textContent=hay?plata(t.total):"Sin precios";
+}
+function sumar(id,d){fijar(id,(pedido[id]||0)+d)}
+function fijar(id,v){v=Math.max(0,parseInt(v)||0);if(v)pedido[id]=v;else delete pedido[id];pintar()}
+function limpiar(){
+  if(!Object.keys(pedido).length)return;
+  if(!confirm("¿Vaciar todo el pedido?"))return;
+  Object.keys(pedido).forEach(k=>delete pedido[k]);pintar();avisar("Pedido vaciado");
+}
+function lineasActuales(){
+  return PRODUCTOS.filter(p=>pedido[p.id]>0).map(p=>({
+    id:p.id,rubro:p.rubro,nombre:p.nombre,pres:p.pres,cant:pedido[p.id],unit:netoUnit(p.id)}));
+}
+function totalesDe(lineas){
+  const neto=lineas.reduce((a,l)=>a+l.unit*l.cant,0);
+  const iva=neto*(DB.config.iva||0)/100;
+  return {neto,iva,total:neto+iva};
+}
+
+/* ================= clientes ================= */
+function pintarSelector(){
+  const s=document.getElementById("selCliente");
+  s.innerHTML='<option value="">— Cliente nuevo —</option>'+
+    DB.clientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join("");
+  s.value=clienteActivo||"";
+}
+function cargarCliente(id){
+  clienteActivo=id||null;
+  const c=DB.clientes.find(x=>x.id===id);
+  if(!c){nuevoCliente();return}
+  set("cliente",c.nombre);set("tel",c.tel);set("localidad",c.localidad);
+  if(c.entrega)set("entrega",c.entrega);
+  avisar("Datos de "+c.nombre+" cargados");
+}
+function nuevoCliente(){
+  clienteActivo=null;["cliente","tel","localidad"].forEach(i=>set(i,""));
+  pintarSelector();document.getElementById("cliente").focus();
+}
+async function sincronizarCliente(){
+  const nombre=val("cliente");if(!nombre)return null;
+  let c=DB.clientes.find(x=>x.id===clienteActivo)||DB.clientes.find(x=>norm(x.nombre)===norm(nombre));
+  if(!c){c={id:"c"+Date.now(),nombre};DB.clientes.push(c)}
+  c.nombre=nombre;c.tel=val("tel");c.localidad=val("localidad");c.entrega=val("entrega");
+  clienteActivo=c.id;await persistir();pintarSelector();return c;
+}
+function pintarClientes(){
+  const cont=document.getElementById("tablaClientes");
+  if(!DB.clientes.length){cont.innerHTML=`<div class="vacio">Todavía no hay clientes. Se guardan solos al guardar un pedido.</div>`;return}
+  cont.innerHTML=`<table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Localidad</th><th class="num">Pedidos</th><th></th></tr></thead><tbody>`+
+    DB.clientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>{
+      const n=DB.pedidos.filter(p=>p.clienteId===c.id).length;
+      return `<tr><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.tel)||"—"}</td><td>${esc(c.localidad)||"—"}</td><td class="num">${n}</td>
+      <td class="acc"><button class="btn chico linea" onclick="pedidoPara('${c.id}')">Nuevo pedido</button>
+      <button class="btn chico rojo" onclick="borrarCliente('${c.id}')">Borrar</button></td></tr>`}).join("")+"</tbody></table>";
+}
+function pedidoPara(id){ver("pedido");document.getElementById("selCliente").value=id;cargarCliente(id)}
+async function borrarCliente(id){
+  const c=DB.clientes.find(x=>x.id===id);
+  if(!confirm(`¿Borrar a ${c.nombre}? Los pedidos del historial se conservan.`))return;
+  DB.clientes=DB.clientes.filter(x=>x.id!==id);
+  if(clienteActivo===id)clienteActivo=null;
+  await persistir();pintarClientes();pintarSelector();avisar("Cliente borrado");
+}
+
+/* ================= historial ================= */
+function cabecera(){return{cliente:val("cliente"),tel:val("tel"),localidad:val("localidad"),vendedor:val("vendedor"),fecha:val("fecha"),entrega:val("entrega"),obs:val("obs")}}
+const cobrado=p=>(p.pagos||[]).reduce((a,x)=>a+x.monto,0);
+function estado(p){
+  const c=cobrado(p);
+  if(c<=0)return{cls:"pend",txt:"Pendiente"};
+  if(c+0.01<p.totales.total)return{cls:"parc",txt:"Parcial"};
+  return{cls:"cob",txt:"Cobrado"};
+}
+async function guardarPedido(){
+  const l=lineasActuales();
+  if(!l.length){avisar("Cargá al menos un producto");return}
+  if(!val("cliente")){avisar("Falta el nombre del cliente");document.getElementById("cliente").focus();return}
+  const c=await sincronizarCliente();
+  DB.pedidos.unshift({id:"p"+Date.now(),clienteId:c.id,...cabecera(),lineas:l,
+    bultos:l.reduce((a,x)=>a+x.cant,0),totales:totalesDe(l),ivaPct:DB.config.iva,pagos:[]});
+  await persistir();avisar("Pedido guardado en el historial");
+}
+function pintarHistorial(){
+  const cont=document.getElementById("tablaHistorial");
+  if(!DB.pedidos.length){cont.innerHTML=`<div class="vacio">Todavía no guardaste ningún pedido.</div>`;return}
+  cont.innerHTML=`<table><thead><tr><th>Fecha</th><th>Cliente</th><th class="num">Unid.</th><th class="num">Total</th><th>Cobro</th><th></th></tr></thead><tbody>`+
+    DB.pedidos.map(p=>{const e=estado(p),c=cobrado(p);
+      return `<tr><td>${esc(p.fecha)||"—"}</td>
+      <td><strong>${esc(p.cliente)}</strong><br><small style="color:var(--gris)">${esc(p.localidad)}</small></td>
+      <td class="num">${p.bultos}</td>
+      <td class="num">${p.totales.total?plata(p.totales.total):"—"}</td>
+      <td><span class="pill ${e.cls}">${e.txt}</span>${c?`<br><small style="color:var(--gris)">${plata(c)}</small>`:""}</td>
+      <td class="acc">
+        <button class="btn chico linea" onclick="abrirPagos('${p.id}')">Cobros</button>
+        <button class="btn chico linea" onclick="excelDe('${p.id}')">Excel</button>
+        <button class="btn chico linea" onclick="repetir('${p.id}')">Repetir</button>
+        <button class="btn chico rojo" onclick="borrarPedido('${p.id}')">Borrar</button>
+      </td></tr>`}).join("")+"</tbody></table>";
+}
+function repetir(id){
+  const p=DB.pedidos.find(x=>x.id===id);
+  Object.keys(pedido).forEach(k=>delete pedido[k]);
+  p.lineas.forEach(l=>{const prod=l.id?porId(l.id):PRODUCTOS.find(x=>x.rubro===l.rubro&&x.nombre===l.nombre);if(prod)pedido[prod.id]=l.cant});
+  clienteActivo=p.clienteId;
+  set("cliente",p.cliente);set("tel",p.tel);set("localidad",p.localidad);set("vendedor",p.vendedor);set("entrega",p.entrega);set("obs",p.obs);
+  document.getElementById("fecha").valueAsDate=new Date();
+  pintarSelector();ver("pedido");pintar();avisar("Pedido cargado para editar");
+}
+async function borrarPedido(id){
+  if(!confirm("¿Borrar este pedido del historial?"))return;
+  DB.pedidos=DB.pedidos.filter(x=>x.id!==id);
+  await persistir();pintarHistorial();avisar("Pedido borrado");
+}
+
+/* ================= cobros ================= */
+function abrirPagos(id){
+  pedidoEnPagos=id;
+  const p=DB.pedidos.find(x=>x.id===id);
+  document.getElementById("dlgTit").textContent=p.cliente;
+  document.getElementById("dlgSub").textContent=`Pedido del ${p.fecha||"—"} · Total ${p.totales.total?plata(p.totales.total):"sin precios"}`;
+  document.getElementById("pagoFecha").valueAsDate=new Date();
+  document.getElementById("pagoMonto").value="";
+  pintarPagos();document.getElementById("dlgPagos").showModal();
+}
+function pintarPagos(){
+  const p=DB.pedidos.find(x=>x.id===pedidoEnPagos);
+  const c=cobrado(p),saldo=Math.max(0,p.totales.total-c);
+  document.getElementById("listaPagos").innerHTML=
+    ((p.pagos||[]).map((x,i)=>`<div class="pago"><span>${esc(x.fecha)}</span><span>${plata(x.monto)}
+      <button class="btn chico rojo" style="padding:2px 8px;margin-left:6px" onclick="quitarPago(${i})">×</button></span></div>`).join("")
+     ||`<p style="color:var(--gris);font-size:14px;margin:0">Sin cobros registrados.</p>`)
+    +`<div class="pago" style="border:none;font-weight:700"><span>Saldo pendiente</span><span>${plata(saldo)}</span></div>`;
+}
+async function agregarPago(){
+  const m=parseFloat(document.getElementById("pagoMonto").value);
+  if(!m||m<=0){avisar("Poné un monto válido");return}
+  const p=DB.pedidos.find(x=>x.id===pedidoEnPagos);
+  (p.pagos=p.pagos||[]).push({monto:m,fecha:document.getElementById("pagoFecha").value});
+  document.getElementById("pagoMonto").value="";
+  await persistir();pintarPagos();pintarHistorial();avisar("Cobro registrado");
+}
+async function saldarTodo(){
+  const p=DB.pedidos.find(x=>x.id===pedidoEnPagos);
+  const saldo=p.totales.total-cobrado(p);
+  if(saldo<=0.01){avisar("Ya está cobrado por completo");return}
+  (p.pagos=p.pagos||[]).push({monto:saldo,fecha:document.getElementById("pagoFecha").value});
+  await persistir();pintarPagos();pintarHistorial();avisar("Pedido saldado");
+}
+async function quitarPago(i){
+  const p=DB.pedidos.find(x=>x.id===pedidoEnPagos);
+  p.pagos.splice(i,1);await persistir();pintarPagos();pintarHistorial();
+}
+
+/* ================= precios ================= */
+function guardarConfig(){
+  DB.config.iva=parseFloat(document.getElementById("cfgIva").value)||0;
+  DB.config.tipo=document.getElementById("cfgTipo").value;
+  DB.config.comision=parseFloat(document.getElementById("cfgCom").value)||0;
+  persistir();pintar();pintarNumeros();
+}
+function pintarPrecios(){
+  const q=norm(val("qp")),r=selRubroP.value;let html="";
+  CATALOGO.forEach(g=>{
+    if(r&&g.rubro!==r)return;
+    const vis=PRODUCTOS.filter(p=>p.rubro===g.rubro&&(!q||norm(p.nombre).includes(q)));
+    if(!vis.length)return;
+    html+=`<section class="rubro"><h3>${g.rubro}</h3><div class="presentacion">Precio por ${g.pres.toLowerCase()}</div>`;
+    vis.forEach(p=>{html+=`<div class="precio-fila"><div class="n">${esc(p.nombre)}<small>${p.pres}</small></div>
+      <input type="number" min="0" step="0.01" placeholder="0,00" value="${DB.precios[p.id]??""}" onchange="fijarPrecio('${p.id}',this.value)"></div>`});
+    html+="</section>";
+  });
+  document.getElementById("listaPrecios").innerHTML=html||`<div class="vacio">Sin resultados.</div>`;
+  const c=Object.keys(DB.precios).length;
+  document.querySelector("#v-precios .sub").textContent=
+    `Los precios se guardan solo en este dispositivo: no viajan en el archivo publicado. ${c} de ${PRODUCTOS.length} productos con precio cargado.`;
+}
+function fijarPrecio(id,v){
+  const n=parseFloat(v);
+  if(n>0)DB.precios[id]=n;else delete DB.precios[id];
+  persistir();pintarPrecios();pintar();
+}
+function borrarPrecios(){
+  if(!confirm("¿Borrar todos los precios cargados?"))return;
+  DB.precios={};persistir();pintarPrecios();pintar();avisar("Precios borrados");
+}
+function plantillaPrecios(){
+  const filas=[["codigo","rubro","producto","se_pide_por","precio"]];
+  PRODUCTOS.forEach(p=>filas.push([p.id,p.rubro,p.nombre,p.pres,DB.precios[p.id]??""]));
+  bajarCSV(filas,"plantilla-precios-piperpol.csv");
+  avisar("Completá la columna precio y volvé a cargarla");
+}
+function importarPrecios(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    const lineas=r.result.replace(/^\uFEFF/,"").split(/\r?\n/).filter(x=>x.trim());
+    let n=0;
+    lineas.slice(1).forEach(li=>{
+      const c=li.split(/;|\t/).map(x=>x.replace(/^"|"$/g,"").trim());
+      if(c.length<5)return;
+      const id=c[0], precio=parseFloat(c[4].replace(/\./g,"").replace(",","."));
+      if(porId(id)&&precio>0){DB.precios[id]=precio;n++}
+    });
+    await persistir();pintarPrecios();pintar();
+    avisar(n?`${n} precios cargados`:"No se encontraron precios en el archivo");
+    input.value="";
+  };
+  r.readAsText(f);
+}
+
+/* ================= mis números ================= */
+function mesDe(p){return(p.fecha||"").slice(0,7)}
+function netoCobrado(p){
+  const t=p.totales.total;if(!t)return 0;
+  return cobrado(p)*(p.totales.neto/t);
+}
+function pintarNumeros(){
+  const sel=document.getElementById("filtroMes");
+  const meses=[...new Set(DB.pedidos.map(mesDe).filter(Boolean))].sort().reverse();
+  const actual=sel.value;
+  sel.innerHTML='<option value="">Todo el período</option>'+meses.map(m=>`<option value="${m}">${m}</option>`).join("");
+  sel.value=meses.includes(actual)?actual:"";
+  const f=sel.value, lista=DB.pedidos.filter(p=>!f||mesDe(p)===f);
+  const vendido=lista.reduce((a,p)=>a+p.totales.neto,0);
+  const cob=lista.reduce((a,p)=>a+cobrado(p),0);
+  const netoCob=lista.reduce((a,p)=>a+netoCobrado(p),0);
+  const pendiente=lista.reduce((a,p)=>a+Math.max(0,p.totales.total-cobrado(p)),0);
+  const com=netoCob*(DB.config.comision||0)/100;
+  document.getElementById("kpis").innerHTML=`
+    <div class="kpi"><div class="et">Vendido (neto)</div><div class="nu">${plata(vendido)}</div></div>
+    <div class="kpi"><div class="et">Cobrado (con IVA)</div><div class="nu">${plata(cob)}</div></div>
+    <div class="kpi"><div class="et">Pendiente de cobro</div><div class="nu">${plata(pendiente)}</div></div>
+    <div class="kpi destaca"><div class="et">Mi comisión ${DB.config.comision}% sobre neto cobrado</div><div class="nu">${plata(com)}</div></div>`;
+  document.getElementById("tablaNumeros").innerHTML=lista.length?
+    `<table><thead><tr><th>Fecha</th><th>Cliente</th><th class="num">Neto</th><th class="num">Total</th><th class="num">Cobrado</th><th class="num">Saldo</th><th class="num">Mi comisión</th></tr></thead><tbody>`+
+    lista.map(p=>`<tr><td>${esc(p.fecha)||"—"}</td><td>${esc(p.cliente)}</td>
+      <td class="num">${plata(p.totales.neto)}</td><td class="num">${plata(p.totales.total)}</td>
+      <td class="num">${plata(cobrado(p))}</td><td class="num">${plata(Math.max(0,p.totales.total-cobrado(p)))}</td>
+      <td class="num"><strong>${plata(netoCobrado(p)*(DB.config.comision||0)/100)}</strong></td></tr>`).join("")+"</tbody></table>"
+    :`<div class="vacio">Sin pedidos en este período.</div>`;
+}
+
+/* ================= Excel ================= */
+function exportarActual(){
+  const l=lineasActuales();
+  if(!l.length){avisar("Cargá al menos un producto");return}
+  aExcel({...cabecera(),totales:totalesDe(l),ivaPct:DB.config.iva},l,document.getElementById("conPrecios").checked);
+}
+function excelDe(id){const p=DB.pedidos.find(x=>x.id===id);aExcel(p,p.lineas,hayPrecios())}
+function aExcel(d,lineas,precios){
+  const arch=`Pedido_${(d.cliente||"sin-cliente").replace(/[^\w\-]+/g,"_")}_${d.fecha||""}`;
+  const conPlata=precios&&d.totales&&d.totales.neto>0;
+  const filas=[["PEDIDO PIPER POL"],["Cliente",d.cliente],["Teléfono",d.tel],["Localidad",d.localidad],
+    ["Vendedor",d.vendedor],["Fecha",d.fecha],["Entrega",d.entrega],["Observaciones",d.obs],[]];
+  filas.push(conPlata?["Rubro","Producto","Se pide por","Cantidad (unidades)","Precio unit. neto","Subtotal neto","Preparado"]
+                     :["Rubro","Producto","Se pide por","Cantidad (unidades)","Preparado"]);
+  lineas.forEach(l=>filas.push(conPlata?[l.rubro,l.nombre,l.pres,l.cant,l.unit,l.unit*l.cant,""]
+                                       :[l.rubro,l.nombre,l.pres,l.cant,""]));
+  filas.push([]);
+  filas.push(conPlata?["","","TOTAL DE UNIDADES",lineas.reduce((a,l)=>a+l.cant,0),"","",""]
+                     :["","","TOTAL DE UNIDADES",lineas.reduce((a,l)=>a+l.cant,0),""]);
+  if(conPlata){
+    filas.push(["","","","","Neto",d.totales.neto,""]);
+    filas.push(["","","","",`IVA ${d.ivaPct??DB.config.iva}%`,d.totales.iva,""]);
+    filas.push(["","","","","TOTAL",d.totales.total,""]);
+  }
+  if(typeof XLSX==="undefined"){bajarCSV(filas,arch+".csv");return}
+  const h=XLSX.utils.aoa_to_sheet(filas);
+  h["!cols"]=[{wch:26},{wch:34},{wch:32},{wch:12},{wch:16},{wch:16},{wch:12}];
+  const lib=XLSX.utils.book_new();XLSX.utils.book_append_sheet(lib,h,"Pedido");
+  XLSX.writeFile(lib,arch+".xlsx");avisar("Excel descargado");
+}
+function excelLiquidacion(){
+  const f=document.getElementById("filtroMes").value;
+  const lista=DB.pedidos.filter(p=>!f||mesDe(p)===f);
+  if(!lista.length){avisar("No hay pedidos en este período");return}
+  const filas=[["MI LIQUIDACIÓN — USO PERSONAL"],["Período",f||"Todo"],["Comisión",(DB.config.comision||0)+"% sobre neto cobrado"],[],
+    ["Fecha","Cliente","Neto","IVA","Total","Cobrado","Saldo","Neto cobrado","Mi comisión"]];
+  lista.forEach(p=>filas.push([p.fecha,p.cliente,p.totales.neto,p.totales.iva,p.totales.total,
+    cobrado(p),Math.max(0,p.totales.total-cobrado(p)),netoCobrado(p),netoCobrado(p)*(DB.config.comision||0)/100]));
+  const com=lista.reduce((a,p)=>a+netoCobrado(p)*(DB.config.comision||0)/100,0);
+  filas.push([],["","","","","","","","TOTAL A COBRAR",com]);
+  if(typeof XLSX==="undefined"){bajarCSV(filas,"mi-liquidacion.csv");return}
+  const h=XLSX.utils.aoa_to_sheet(filas);
+  h["!cols"]=[{wch:12},{wch:30},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:16}];
+  const lib=XLSX.utils.book_new();XLSX.utils.book_append_sheet(lib,h,"Liquidación");
+  XLSX.writeFile(lib,`mi-liquidacion-${f||"total"}.xlsx`);avisar("Liquidación descargada");
+}
+function bajarCSV(filas,nombre){
+  const csv=filas.map(f=>f.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(";")).join("\n");
+  bajar(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),nombre);
+}
+function bajar(blob,nombre){
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nombre;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+/* ================= copia ================= */
+function respaldar(){
+  const f=new Date().toISOString().slice(0,10);
+  bajar(new Blob([JSON.stringify(DB,null,2)],{type:"application/json"}),`copia-piperpol-${f}.json`);
+  avisar("Copia descargada");
+}
+function restaurar(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!d.clientes||!d.pedidos)throw 0;
+      if(!confirm(`La copia tiene ${d.clientes.length} clientes y ${d.pedidos.length} pedidos. Reemplaza lo que hay ahora. ¿Seguir?`))return;
+      DB={precios:{},config:{comision:15,iva:21,tipo:"neto"},...d};
+      await persistir();arrancarUI();avisar("Copia restaurada");
+    }catch(e){avisar("El archivo no es una copia válida")}
+    input.value="";
+  };
+  r.readAsText(f);
+}
+
+/* ================= arranque ================= */
+function arrancarUI(){
+  set("cfgIva",DB.config.iva);set("cfgCom",DB.config.comision);
+  document.getElementById("cfgTipo").value=DB.config.tipo||"neto";
+  pintarSelector();pintar();pintarPrecios();pintarNumeros();
+}
+(async()=>{
+  const d=await store.leer();
+  if(d&&d.clientes)DB={precios:{},config:{comision:15,iva:21,tipo:"neto"},...d,
+    config:{comision:15,iva:21,tipo:"neto",...(d.config||{})}};
+  if(!guardaOk)document.getElementById("alerta").classList.add("ver");
+  arrancarUI();
+})();
+</script>
