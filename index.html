@@ -321,6 +321,8 @@ function netoUnit(id){
   if(!p)return 0;
   return DB.config.tipo==="bruto"? p/factorIva() : p;
 }
+/* precio final unitario: lo que realmente paga el cliente por unidad, con IVA ya incluido */
+function precioFinalUnit(id){ return netoUnit(id)*factorIva(); }
 const hayPrecios=()=>Object.keys(DB.precios).length>0;
 function avisar(t){const a=document.getElementById("aviso");a.textContent=t;a.classList.add("ver");clearTimeout(a._t);a._t=setTimeout(()=>a.classList.remove("ver"),2600)}
 
@@ -350,7 +352,7 @@ function pintar(){
     html+=`<section class="rubro"><h3>${g.rubro}</h3><div class="presentacion">Se pide por <strong>${g.pres.toLowerCase()}</strong>${g.caja?" · "+g.caja+" (referencia)":""}</div><div class="lista">`;
     vis.forEach(p=>{const c=pedido[p.id]||0, pr=DB.precios[p.id];
       const pesoPropio = p.pres && norm(p.pres)!==norm(g.pres);
-      html+=`<div class="item ${c?"activo":""}"><div class="nombre">${esc(p.nombre)}${pesoPropio?`<small>${esc(p.pres)}</small>`:""}${pr?`<small>${plata(netoUnit(p.id))} + IVA</small>`:""}</div><div class="cant">
+      html+=`<div class="item ${c?"activo":""}"><div class="nombre">${esc(p.nombre)}${pesoPropio?`<small>${esc(p.pres)}</small>`:""}${pr?`<small>${plata(precioFinalUnit(p.id))}</small>`:""}</div><div class="cant">
         <button aria-label="Quitar uno de ${esc(p.nombre)}" onclick="sumar('${p.id}',-1)">−</button>
         <input type="number" min="0" value="${c}" aria-label="Cantidad de ${esc(p.nombre)}" onchange="fijar('${p.id}',this.value)">
         <button aria-label="Agregar uno de ${esc(p.nombre)}" onclick="sumar('${p.id}',1)">+</button></div></div>`;
@@ -363,7 +365,7 @@ function pintar(){
 function pintarResumen(){
   const l=PRODUCTOS.filter(p=>pedido[p.id]>0);
   document.getElementById("resumen").innerHTML=l.length?l.map(p=>{
-    const st=netoUnit(p.id)*pedido[p.id];
+    const st=precioFinalUnit(p.id)*pedido[p.id];
     return `<div class="linea"><span class="qty">${pedido[p.id]}×</span>
       <div class="txt">${esc(p.nombre)}<small>${p.pres}</small></div>
       ${st?`<span class="plata">${plata(st)}</span>`:""}
