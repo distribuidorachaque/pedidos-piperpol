@@ -122,7 +122,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
 <header>
   <div>
     <div class="marca">PIPER <span>POL</span></div>
-    <div class="lema">Toma de pedidos</div>
+    <div class="lema">Piper Pol · Andino · PGN</div>
   </div>
   <nav>
     <button id="tab-pedido" class="on" onclick="ver('pedido')">Nuevo pedido</button>
@@ -163,6 +163,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
     </div>
     <div class="buscador">
       <input id="q" placeholder="Buscar producto (ej: digestivo, boldo, stevia)" oninput="pintar()">
+      <select id="marca" onchange="cambioMarca()"></select>
       <select id="rubro" onchange="pintar()"></select>
     </div>
     <div id="catalogo"></div>
@@ -208,11 +209,8 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
     <p class="sub">Los precios se guardan solo en este dispositivo: no viajan en el archivo publicado.</p>
     <div class="campos" style="margin-bottom:14px">
       <div><label for="cfgIva">IVA a aplicar (%)</label><input id="cfgIva" type="number" min="0" step="0.5" onchange="guardarConfig()"></div>
-      <div><label for="cfgTipo">Los precios que cargo son</label>
-        <select id="cfgTipo" onchange="guardarConfig()">
-          <option value="neto">Netos, sin IVA</option>
-          <option value="bruto">Finales, con IVA incluido</option>
-        </select>
+      <div><label>Los precios que cargás</label>
+        <div style="padding:9px 11px;border:1px solid var(--linea);border-radius:8px;background:var(--papel);color:var(--gris)">Siempre finales, con IVA ya incluido</div>
       </div>
     </div>
     <div class="fila-sup">
@@ -223,6 +221,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
     </div>
     <div class="buscador" style="margin-top:14px">
       <input id="qp" placeholder="Buscar producto para cargar su precio" oninput="pintarPrecios()">
+      <select id="marcaP" onchange="cambioMarcaP()"></select>
       <select id="rubroP" onchange="pintarPrecios()"></select>
     </div>
     <div id="listaPrecios"></div>
@@ -261,27 +260,32 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 20:15</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 22:50</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
 /* ================= catálogo ================= */
 const CATALOGO=[
- {rubro:"Tisanas en gotas",pres:"Frasco de 100 cc",caja:"Caja cerrada: 20 frascos",items:["Antiinflamatorio","Antiséptico urinario","Antiséptico vías respiratorias","Colagogo","Depurativo","Diabetes","Digestivo","Diurético","Energizante natural","Laxante","Piper hepat","Reductora","Sedante","Vigorizante sexual natural"]},
- {rubro:"Tisanas en hebras",pres:"Bolsita de 70 gr",caja:"",items:["Antigripal","Antiinflamatorio","Antiparasitario","Antiséptico vías respiratorias","Antiséptico urinario","Arterial","Colagogo","Depurativo","Diabetes","Digestivo","Diurético","Energizante natural","Laxante","Ovárica","Próstata","Reductor de colesterol","Reductora","Sedante","Várices","Vigorizante sexual natural"]},
- {rubro:"Tisanas en saquitos",pres:"Estuche de 25 saquitos x 1,5 gr",caja:"Caja cerrada: 12 estuches",items:["Reductora","Sedante","Digestivo","Colagogo","Laxante","Diurético","Diabetes","Reductor de colesterol"]},
- {rubro:"Monohierbas en gotas",pres:"Frasco de 100 cc",caja:"Caja cerrada: 20 frascos",items:["Árnica","Café verde","Cardo mariano","Carqueja","Castaña de India","Centella asiática","Cola de caballo","Diente de león","Equinácea","Ginkgo biloba","Hamamelis","Hipérico","Pasionaria","Rompiedra","Saw palmeto","Sombra de toro","Spirulina","Uña de gato","Uva ursi","Valeriana"]},
- {rubro:"Monohierbas en hebras",pres:"Bolsita, peso según la hierba",caja:"",items:[{n:"Alcachofa",p:"Bolsita de 50 gr"},{n:"Alfirelillo",p:"Bolsita (peso a confirmar)"},{n:"Ambay",p:"Bolsita de 40 gr"},{n:"Anís estrellado",p:"Bolsita de 10 gr"},{n:"Anís verde",p:"Bolsita (peso a confirmar)"},{n:"Boldo",p:"Bolsita de 30 gr"},{n:"Borraja",p:"Bolsita de 50 gr"},{n:"Café verde",p:"Bolsita de 30 gr"},{n:"Cardo mariano",p:"Bolsita de 40 gr"},{n:"Canchalagua",p:"Bolsita (peso a confirmar)"},{n:"Carqueja",p:"Bolsita de 50 gr"},{n:"Cáscara sagrada",p:"Bolsita de 25 gr"},{n:"Castaño de Indias",p:"Bolsita de 25 gr"},{n:"Cedrón",p:"Bolsita de 30 gr"},{n:"Centella asiática",p:"Bolsita de 25 gr"},{n:"Chañar corteza",p:"Bolsita de 50 gr"},{n:"Chía",p:"Bolsita de 100 gr"},{n:"Cola de caballo",p:"Bolsita de 40 gr"},{n:"Cola de quirquincho",p:"Bolsita de 30 gr"},{n:"Congorosa",p:"Bolsita de 50 gr"},{n:"Contrayerba",p:"Bolsita de 50 gr"},{n:"Cuasia amarga",p:"Bolsita de 50 gr"},{n:"Doradilla",p:"Bolsita (peso a confirmar)"},{n:"Eneldo",p:"Bolsita de 30 gr"},{n:"Espina colorada",p:"Bolsita (peso a confirmar)"},{n:"Estigma de maíz",p:"Bolsita (peso a confirmar)"},{n:"Eucaliptus",p:"Bolsita de 50 gr"},{n:"Fucus",p:"Bolsita de 30 gr"},{n:"Ginkgo biloba",p:"Bolsita de 25 gr"},{n:"Hinojo",p:"Bolsita de 50 gr"},{n:"Hipérico",p:"Bolsita de 25 gr"},{n:"Hisopo",p:"Bolsita de 50 gr"},{n:"Incayuyo",p:"Bolsita de 50 gr"},{n:"Incienso",p:"Bolsita de 10 gr"},{n:"Jarilla",p:"Bolsita de 50 gr"},{n:"Lapacho",p:"Bolsita de 50 gr"},{n:"Lino",p:"Bolsita de 50 gr"},{n:"Llantén",p:"Bolsita de 50 gr"},{n:"Malva",p:"Bolsita de 50 gr"},{n:"Manzanilla",p:"Bolsita de 25 gr"},{n:"Marrubio",p:"Bolsita de 50 gr"},{n:"Melisa",p:"Bolsita de 40 gr"},{n:"Menta",p:"Bolsita de 25 gr"},{n:"Mirra",p:"Bolsita de 10 gr"},{n:"Ortiga",p:"Bolsita de 50 gr"},{n:"Palo azul",p:"Bolsita de 60 gr"},{n:"Palo pichi",p:"Bolsita de 50 gr"},{n:"Pasionaria",p:"Bolsita de 50 gr"},{n:"Peperina",p:"Bolsita de 30 gr"},{n:"Pezuña de vaca",p:"Bolsita de 50 gr"},{n:"Poleo",p:"Bolsita de 50 gr"},{n:"Romero",p:"Bolsita de 50 gr"},{n:"Rompepiedra",p:"Bolsita de 50 gr"},{n:"Ruda",p:"Bolsita de 50 gr"},{n:"Salvia blanca",p:"Bolsita de 50 gr"},{n:"Sarandí",p:"Bolsita de 50 gr"},{n:"Sen hojas",p:"Bolsita de 30 gr"},{n:"Sombra de toro",p:"Bolsita (peso a confirmar)"},{n:"Stevia",p:"Bolsita de 30 gr"},{n:"Té verde",p:"Bolsita de 25 gr"},{n:"Té rojo",p:"Bolsita de 25 gr"},{n:"Té de burro",p:"Bolsita de 50 gr"},{n:"Tilo",p:"Bolsita (peso a confirmar)"},{n:"Uña de gato",p:"Bolsita (peso a confirmar)"},{n:"Uva ursi",p:"Bolsita (peso a confirmar)"},{n:"Valeriana",p:"Bolsita de 25 gr"},{n:"Yerba carnicera",p:"Bolsita de 50 gr"},{n:"Yerba de la piedra",p:"Bolsita de 30 gr"},{n:"Yerba de pollo",p:"Bolsita de 40 gr"},{n:"Yerba meona",p:"Bolsita de 50 gr"},{n:"Zarzaparrilla",p:"Bolsita de 50 gr"},{n:"Hibiscus (Flor de Jamaica)",p:"Bolsita de 50 gr"},{n:"Muérdago",p:"Bolsita de 80 gr"}]},
- {rubro:"Edulcorantes",pres:"Frasco",caja:"",items:[{n:"Stevia x 100 cc",p:"Frasco de 100 cc"},{n:"Stevia x 200 cc",p:"Frasco de 200 cc"},{n:"Edulcorante Diet",p:"Frasco de 200 cc"},{n:"Stevia 100%",p:"Frasco de 200 cc"}]},
- {rubro:"Té en saquitos",pres:"Estuche de 25 saquitos x 2 gr",caja:"Caja cerrada: 12 estuches",items:["Té rojo","Té verde"]},
- {rubro:"Infusiones en saquitos",pres:"Estuche de 25 saquitos",caja:"Caja cerrada: 12 estuches",items:[{n:"Boldo",p:"Estuche de 25 saquitos x 1,5 gr"},{n:"Cedrón",p:"Estuche de 25 saquitos x 1 gr"},{n:"Manzanilla",p:"Estuche de 25 saquitos x 1 gr"},{n:"Jengibre con limón",p:"Estuche de 25 saquitos x 2 gr"},{n:"Tilo",p:"Estuche de 25 saquitos x 1 gr"},{n:"Menta",p:"Estuche de 25 saquitos x 1,5 gr"},{n:"Yerba compuesta",p:"Estuche de 25 saquitos x 2 gr"}]},
- {rubro:"Yerba mate compuesta",pres:"Paquete de 500 gr",caja:"Caja cerrada: 12 paquetes",items:["Piper Pol con hierbas serranas","Piper Pol naranja-limón","Piper Pol con jengibre","Piper Pol con boldo"]},
- {rubro:"Valle Verde",pres:"Paquete de 500 gr",caja:"",items:[{n:"Hierbas serranas con yerba mate",p:"Paquete de 500 gr"},{n:"Té en saquitos",p:"Estuche de 25 saquitos x 2 gr"}]},
- {rubro:"Suplementos",pres:"Pote",caja:"",items:[{n:"PuroVitam",p:"Pote de 800 gr"}]}
+ {marca:"Piper Pol",rubro:"Tisanas en gotas",pres:"Frasco de 100 cc",caja:"Caja cerrada: 20 frascos",items:["Antiinflamatorio","Antiséptico urinario","Antiséptico vías respiratorias","Colagogo","Depurativo","Diabetes","Digestivo","Diurético","Energizante natural","Laxante","Piper hepat","Reductora","Sedante","Vigorizante sexual natural"]},
+ {marca:"Piper Pol",rubro:"Tisanas en hebras",pres:"Bolsita de 70 gr",caja:"",items:["Antigripal","Antiinflamatorio","Antiparasitario","Antiséptico vías respiratorias","Antiséptico urinario","Arterial","Colagogo","Depurativo","Diabetes","Digestivo","Diurético","Energizante natural","Laxante","Ovárica","Próstata","Reductor de colesterol","Reductora","Sedante","Várices","Vigorizante sexual natural"]},
+ {marca:"Piper Pol",rubro:"Tisanas en saquitos",pres:"Estuche de 25 saquitos x 1,5 gr",caja:"Caja cerrada: 12 estuches",items:["Reductora","Sedante","Digestivo","Colagogo","Laxante","Diurético","Diabetes","Reductor de colesterol"]},
+ {marca:"Piper Pol",rubro:"Monohierbas en gotas",pres:"Frasco de 100 cc",caja:"Caja cerrada: 20 frascos",items:["Árnica","Café verde","Cardo mariano","Carqueja","Castaña de India","Centella asiática","Cola de caballo","Diente de león","Equinácea","Ginkgo biloba","Hamamelis","Hipérico","Pasionaria","Rompiedra","Saw palmeto","Sombra de toro","Spirulina","Uña de gato","Uva ursi","Valeriana"]},
+ {marca:"Piper Pol",rubro:"Monohierbas en hebras",pres:"Bolsita, peso según la hierba",caja:"",items:[{n:"Alcachofa",p:"Bolsita de 50 gr"},{n:"Alfirelillo",p:"Bolsita (peso a confirmar)"},{n:"Ambay",p:"Bolsita de 40 gr"},{n:"Anís estrellado",p:"Bolsita de 10 gr"},{n:"Anís verde",p:"Bolsita (peso a confirmar)"},{n:"Boldo",p:"Bolsita de 30 gr"},{n:"Borraja",p:"Bolsita de 50 gr"},{n:"Café verde",p:"Bolsita de 30 gr"},{n:"Cardo mariano",p:"Bolsita de 40 gr"},{n:"Canchalagua",p:"Bolsita (peso a confirmar)"},{n:"Carqueja",p:"Bolsita de 50 gr"},{n:"Cáscara sagrada",p:"Bolsita de 25 gr"},{n:"Castaño de Indias",p:"Bolsita de 25 gr"},{n:"Cedrón",p:"Bolsita de 30 gr"},{n:"Centella asiática",p:"Bolsita de 25 gr"},{n:"Chañar corteza",p:"Bolsita de 50 gr"},{n:"Chía",p:"Bolsita de 100 gr"},{n:"Cola de caballo",p:"Bolsita de 40 gr"},{n:"Cola de quirquincho",p:"Bolsita de 30 gr"},{n:"Congorosa",p:"Bolsita de 50 gr"},{n:"Contrayerba",p:"Bolsita de 50 gr"},{n:"Cuasia amarga",p:"Bolsita de 50 gr"},{n:"Doradilla",p:"Bolsita (peso a confirmar)"},{n:"Eneldo",p:"Bolsita de 30 gr"},{n:"Espina colorada",p:"Bolsita (peso a confirmar)"},{n:"Estigma de maíz",p:"Bolsita (peso a confirmar)"},{n:"Eucaliptus",p:"Bolsita de 50 gr"},{n:"Fucus",p:"Bolsita de 30 gr"},{n:"Ginkgo biloba",p:"Bolsita de 25 gr"},{n:"Hinojo",p:"Bolsita de 50 gr"},{n:"Hipérico",p:"Bolsita de 25 gr"},{n:"Hisopo",p:"Bolsita de 50 gr"},{n:"Incayuyo",p:"Bolsita de 50 gr"},{n:"Incienso",p:"Bolsita de 10 gr"},{n:"Jarilla",p:"Bolsita de 50 gr"},{n:"Lapacho",p:"Bolsita de 50 gr"},{n:"Lino",p:"Bolsita de 50 gr"},{n:"Llantén",p:"Bolsita de 50 gr"},{n:"Malva",p:"Bolsita de 50 gr"},{n:"Manzanilla",p:"Bolsita de 25 gr"},{n:"Marrubio",p:"Bolsita de 50 gr"},{n:"Melisa",p:"Bolsita de 40 gr"},{n:"Menta",p:"Bolsita de 25 gr"},{n:"Mirra",p:"Bolsita de 10 gr"},{n:"Ortiga",p:"Bolsita de 50 gr"},{n:"Palo azul",p:"Bolsita de 60 gr"},{n:"Palo pichi",p:"Bolsita de 50 gr"},{n:"Pasionaria",p:"Bolsita de 50 gr"},{n:"Peperina",p:"Bolsita de 30 gr"},{n:"Pezuña de vaca",p:"Bolsita de 50 gr"},{n:"Poleo",p:"Bolsita de 50 gr"},{n:"Romero",p:"Bolsita de 50 gr"},{n:"Rompepiedra",p:"Bolsita de 50 gr"},{n:"Ruda",p:"Bolsita de 50 gr"},{n:"Salvia blanca",p:"Bolsita de 50 gr"},{n:"Sarandí",p:"Bolsita de 50 gr"},{n:"Sen hojas",p:"Bolsita de 30 gr"},{n:"Sombra de toro",p:"Bolsita (peso a confirmar)"},{n:"Stevia",p:"Bolsita de 30 gr"},{n:"Té verde",p:"Bolsita de 25 gr"},{n:"Té rojo",p:"Bolsita de 25 gr"},{n:"Té de burro",p:"Bolsita de 50 gr"},{n:"Tilo",p:"Bolsita (peso a confirmar)"},{n:"Uña de gato",p:"Bolsita (peso a confirmar)"},{n:"Uva ursi",p:"Bolsita (peso a confirmar)"},{n:"Valeriana",p:"Bolsita de 25 gr"},{n:"Yerba carnicera",p:"Bolsita de 50 gr"},{n:"Yerba de la piedra",p:"Bolsita de 30 gr"},{n:"Yerba de pollo",p:"Bolsita de 40 gr"},{n:"Yerba meona",p:"Bolsita de 50 gr"},{n:"Zarzaparrilla",p:"Bolsita de 50 gr"},{n:"Hibiscus (Flor de Jamaica)",p:"Bolsita de 50 gr"},{n:"Muérdago",p:"Bolsita de 80 gr"}]},
+ {marca:"Piper Pol",rubro:"Edulcorantes",pres:"Frasco",caja:"",items:[{n:"Stevia x 100 cc",p:"Frasco de 100 cc"},{n:"Stevia x 200 cc",p:"Frasco de 200 cc"},{n:"Edulcorante Diet",p:"Frasco de 200 cc"},{n:"Stevia 100%",p:"Frasco de 200 cc"}]},
+ {marca:"Piper Pol",rubro:"Té en saquitos",pres:"Estuche de 25 saquitos x 2 gr",caja:"Caja cerrada: 12 estuches",items:["Té rojo","Té verde"]},
+ {marca:"Piper Pol",rubro:"Infusiones en saquitos",pres:"Estuche de 25 saquitos",caja:"Caja cerrada: 12 estuches",items:[{n:"Boldo",p:"Estuche de 25 saquitos x 1,5 gr"},{n:"Cedrón",p:"Estuche de 25 saquitos x 1 gr"},{n:"Manzanilla",p:"Estuche de 25 saquitos x 1 gr"},{n:"Jengibre con limón",p:"Estuche de 25 saquitos x 2 gr"},{n:"Tilo",p:"Estuche de 25 saquitos x 1 gr"},{n:"Menta",p:"Estuche de 25 saquitos x 1,5 gr"},{n:"Yerba compuesta",p:"Estuche de 25 saquitos x 2 gr"}]},
+ {marca:"Piper Pol",rubro:"Yerba mate compuesta",pres:"Paquete de 500 gr",caja:"Caja cerrada: 12 paquetes",items:["Piper Pol con hierbas serranas","Piper Pol naranja-limón","Piper Pol con jengibre","Piper Pol con boldo"]},
+ {marca:"Piper Pol",rubro:"Valle Verde",pres:"Paquete de 500 gr",caja:"",items:[{n:"Hierbas serranas con yerba mate",p:"Paquete de 500 gr"},{n:"Té en saquitos",p:"Estuche de 25 saquitos x 2 gr"}]},
+ {marca:"Piper Pol",rubro:"Suplementos",pres:"Pote",caja:"",items:[{n:"PuroVitam",p:"Pote de 800 gr"}]},
+ {marca:"Andino",rubro:"Gotas",pres:"Frasco (tamaño a confirmar)",caja:"",items:["Tranquilizante","Asma","Ansiolítico","Antiespasmódico","Várices","Digestivo (fórmula 6)","Revital","Inmunológico","Obesidad","Reumatismo","Laxante","Parásitos","Colesterol","Tónico cerebral","Energizante","Celulitis","Diabetes","Migrañas","Diurético","Digestivo (fórmula 20)","Menopausia","Gripe","Presión alta","Ácido úrico","Hepático","Insomnio","Circulatorio","Cistitis","Acidez-úlcera","Neuroactivador"]},
+ {marca:"Andino",rubro:"Otros",pres:"Frasco",caja:"",items:[{n:"Aceite de orégano",p:"Frasco de 30 cc"}]},
+ {marca:"PGN",rubro:"Cápsulas y comprimidos",pres:"Blíster",caja:"",items:[{n:"Aminoácidos total",p:"Blíster de 100 cápsulas"},{n:"Colágeno + Magnesio",p:"Blíster de 30 cápsulas"},{n:"Creatina",p:"Blíster de 100 cápsulas"},{n:"Cúrcuma",p:"Blíster de 100 cápsulas"},{n:"Espirulina",p:"Blíster de 100 cápsulas"},{n:"Fucus complex",p:"Blíster de 100 cápsulas"},{n:"Lisin C (vitamina C)",p:"Blíster de 100 comprimidos"},{n:"Moringa",p:"Blíster de 100 cápsulas"},{n:"Redumax forte",p:"Blíster de 100 cápsulas"},{n:"Colágeno solar (cápsulas)",p:"Blíster de 30 cápsulas, con betacaroteno"},{n:"Magnesio energy",p:"Blíster de 30 comprimidos"},{n:"Magnesio relax",p:"Blíster de 30 comprimidos"},{n:"Maka forte",p:"Blíster de 30 cápsulas"}]},
+ {marca:"PGN",rubro:"Gotas de hongos medicinales",pres:"Frasco de 60 cc",caja:"",items:["Maitake","Reishi","Shiitake","Tremella","Melena de león"]},
+ {marca:"PGN",rubro:"Líquidos",pres:"Frasco",caja:"",items:[{n:"Colágeno solar (polvo)",p:"Pote de 300 gr, con betacaroteno"},{n:"Novo Pharmatos",p:"Frasco de 120 ml"},{n:"Pharmahepat",p:"Frasco de 70 cc, digestivo natural"},{n:"Uña de gato líquida",p:"Frasco de 120 ml"}]}
 ];
 const PRODUCTOS=[];
 CATALOGO.forEach((g,gi)=>g.items.forEach((it,ii)=>{
-  PRODUCTOS.push({id:gi+"-"+ii,rubro:g.rubro,nombre:typeof it==="string"?it:it.n,pres:typeof it==="string"?g.pres:it.p});
+  PRODUCTOS.push({id:gi+"-"+ii,marca:g.marca,rubro:g.rubro,nombre:typeof it==="string"?it:it.n,pres:typeof it==="string"?g.pres:it.p});
 }));
 const porId=id=>PRODUCTOS.find(p=>p.id===id);
 
@@ -318,7 +322,7 @@ const factorIva=()=>1+(DB.config.iva||0)/100;
 function netoUnit(id){
   const p=DB.precios[id];
   if(!p)return 0;
-  return DB.config.tipo==="bruto"? p/factorIva() : p;
+  return p/factorIva();
 }
 /* precio final unitario: lo que realmente paga el cliente por unidad, con IVA ya incluido */
 function precioFinalUnit(id){ return netoUnit(id)*factorIva(); }
@@ -337,18 +341,28 @@ function ver(p){
 }
 
 /* ================= catálogo / pedido ================= */
-const selRubro=document.getElementById("rubro"), selRubroP=document.getElementById("rubroP");
-const opcionesRubro='<option value="">Todos los rubros</option>'+CATALOGO.map(g=>`<option>${g.rubro}</option>`).join("");
-selRubro.innerHTML=opcionesRubro; selRubroP.innerHTML=opcionesRubro;
+const selMarca=document.getElementById("marca"), selRubro=document.getElementById("rubro");
+const selMarcaP=document.getElementById("marcaP"), selRubroP=document.getElementById("rubroP");
+const MARCAS=[...new Set(CATALOGO.map(g=>g.marca))];
+const opcionesMarca='<option value="">Todas las marcas</option>'+MARCAS.map(m=>`<option>${m}</option>`).join("");
+selMarca.innerHTML=opcionesMarca; selMarcaP.innerHTML=opcionesMarca;
+function opcionesRubroPara(marca){
+  const rubros=CATALOGO.filter(g=>!marca||g.marca===marca).map(g=>g.rubro);
+  return '<option value="">Todos los rubros</option>'+rubros.map(r=>`<option>${r}</option>`).join("");
+}
+selRubro.innerHTML=opcionesRubroPara(""); selRubroP.innerHTML=opcionesRubroPara("");
+function cambioMarca(){ selRubro.innerHTML=opcionesRubroPara(selMarca.value); pintar(); }
+function cambioMarcaP(){ selRubroP.innerHTML=opcionesRubroPara(selMarcaP.value); pintarPrecios(); }
 document.getElementById("fecha").valueAsDate=new Date();
 
 function pintar(){
-  const q=norm(val("q")),r=selRubro.value;let html="";
+  const q=norm(val("q")),r=selRubro.value,m=selMarca.value;let html="";
   CATALOGO.forEach(g=>{
+    if(m&&g.marca!==m)return;
     if(r&&g.rubro!==r)return;
-    const vis=PRODUCTOS.filter(p=>p.rubro===g.rubro&&(!q||norm(p.nombre).includes(q)||norm(p.rubro).includes(q)));
+    const vis=PRODUCTOS.filter(p=>p.marca===g.marca&&p.rubro===g.rubro&&(!q||norm(p.nombre).includes(q)||norm(p.rubro).includes(q)));
     if(!vis.length)return;
-    html+=`<section class="rubro"><h3>${g.rubro}</h3><div class="presentacion">Se pide por <strong>${g.pres.toLowerCase()}</strong>${g.caja?" · "+g.caja+" (referencia)":""}</div><div class="lista">`;
+    html+=`<section class="rubro"><h3>${g.marca} · ${g.rubro}</h3><div class="presentacion">Se pide por <strong>${g.pres.toLowerCase()}</strong>${g.caja?" · "+g.caja+" (referencia)":""}</div><div class="lista">`;
     vis.forEach(p=>{const c=pedido[p.id]||0, pr=DB.precios[p.id];
       const pesoPropio = p.pres && norm(p.pres)!==norm(g.pres);
       html+=`<div class="item ${c?"activo":""}"><div class="nombre">${esc(p.nombre)}${pesoPropio?`<small>${esc(p.pres)}</small>`:""}${pr?`<small>${plata(precioFinalUnit(p.id))}</small>`:""}</div><div class="cant">
@@ -530,17 +544,17 @@ async function quitarPago(i){
 /* ================= precios ================= */
 function guardarConfig(){
   DB.config.iva=parseFloat(document.getElementById("cfgIva").value)||0;
-  DB.config.tipo=document.getElementById("cfgTipo").value;
   DB.config.comision=parseFloat(document.getElementById("cfgCom").value)||0;
   persistir();pintar();pintarNumeros();
 }
 function pintarPrecios(){
-  const q=norm(val("qp")),r=selRubroP.value;let html="";
+  const q=norm(val("qp")),r=selRubroP.value,m=selMarcaP.value;let html="";
   CATALOGO.forEach(g=>{
+    if(m&&g.marca!==m)return;
     if(r&&g.rubro!==r)return;
-    const vis=PRODUCTOS.filter(p=>p.rubro===g.rubro&&(!q||norm(p.nombre).includes(q)));
+    const vis=PRODUCTOS.filter(p=>p.marca===g.marca&&p.rubro===g.rubro&&(!q||norm(p.nombre).includes(q)));
     if(!vis.length)return;
-    html+=`<section class="rubro"><h3>${g.rubro}</h3><div class="presentacion">Precio por ${g.pres.toLowerCase()}</div>`;
+    html+=`<section class="rubro"><h3>${g.marca} · ${g.rubro}</h3><div class="presentacion">Precio por ${g.pres.toLowerCase()}</div>`;
     vis.forEach(p=>{html+=`<div class="precio-fila"><div class="n">${esc(p.nombre)}<small>${p.pres}</small></div>
       <input type="number" min="0" step="0.01" placeholder="0,00" value="${DB.precios[p.id]??""}" onchange="fijarPrecio('${p.id}',this.value)"></div>`});
     html+="</section>";
@@ -696,7 +710,6 @@ function restaurar(input){
 /* ================= arranque ================= */
 function arrancarUI(){
   set("cfgIva",DB.config.iva);set("cfgCom",DB.config.comision);
-  document.getElementById("cfgTipo").value=DB.config.tipo||"neto";
   pintarSelector();pintar();pintarPrecios();pintarNumeros();
 }
 (async()=>{
