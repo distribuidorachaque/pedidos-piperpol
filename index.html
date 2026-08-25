@@ -217,6 +217,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
       <button class="btn chico linea" onclick="plantillaPrecios()">Descargar plantilla en Excel</button>
       <button class="btn chico linea" onclick="document.getElementById('archPrecios').click()">Cargar plantilla completada</button>
       <input type="file" id="archPrecios" accept=".csv" class="oculto" onchange="importarPrecios(this)">
+      <button class="btn chico princ" onclick="compartirListaPrecios()">Compartir lista por marca</button>
       <button class="btn chico rojo" onclick="borrarPrecios()">Borrar todos</button>
     </div>
     <div class="buscador" style="margin-top:14px">
@@ -260,7 +261,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 22:50</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 23:20</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -578,6 +579,31 @@ function plantillaPrecios(){
   PRODUCTOS.forEach(p=>filas.push([p.id,p.rubro,p.nombre,p.pres,DB.precios[p.id]??""]));
   bajarCSV(filas,"plantilla-precios-piperpol.csv");
   avisar("Completá la columna precio y volvé a cargarla");
+}
+function compartirListaPrecios(){
+  if(!hayPrecios()){avisar("Todavía no cargaste ningún precio");return}
+  const fecha=new Date().toISOString().slice(0,10);
+  if(typeof XLSX==="undefined"){avisar("No se pudo generar el Excel");return}
+  const libro=XLSX.utils.book_new();
+  let hojasConDatos=0;
+  MARCAS.forEach(marca=>{
+    const filas=[["LISTA DE PRECIOS — "+marca],["Precios finales, con IVA incluido"],[],["Rubro","Producto","Presentación","Precio"]];
+    let n=0;
+    CATALOGO.filter(g=>g.marca===marca).forEach(g=>{
+      PRODUCTOS.filter(p=>p.marca===marca&&p.rubro===g.rubro&&DB.precios[p.id]>0).forEach(p=>{
+        filas.push([g.rubro,p.nombre,p.pres,Math.round(precioFinalUnit(p.id)*100)/100]);
+        n++;
+      });
+    });
+    if(!n)return;
+    hojasConDatos++;
+    const hoja=XLSX.utils.aoa_to_sheet(filas);
+    hoja["!cols"]=[{wch:26},{wch:34},{wch:32},{wch:14}];
+    XLSX.utils.book_append_sheet(libro,hoja,marca.slice(0,31));
+  });
+  if(!hojasConDatos){avisar("Todavía no cargaste ningún precio");return}
+  XLSX.writeFile(libro,`Lista-precios-${fecha}.xlsx`);
+  avisar("Lista descargada, lista para compartir");
 }
 function importarPrecios(input){
   const f=input.files[0];if(!f)return;
