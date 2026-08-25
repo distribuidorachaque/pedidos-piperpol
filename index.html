@@ -173,8 +173,6 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
     <div class="resumen" id="resumen"></div>
     <div class="pie">
       <div class="tot"><span>Unidades</span><span id="bultos">0</span></div>
-      <div class="tot"><span>Neto</span><span id="tNeto">—</span></div>
-      <div class="tot"><span>IVA <span id="etIva">21%</span></span><span id="tIva">—</span></div>
       <div class="tot grande"><span>Total</span><span id="tTotal">—</span></div>
       <label class="chk"><input type="checkbox" id="conPrecios" checked> Incluir precios en el Excel</label>
       <button class="btn princ" onclick="guardarPedido()">Guardar pedido</button>
@@ -263,7 +261,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 19:05</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 20:15</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -375,10 +373,7 @@ function pintarResumen(){
   document.getElementById("bultos").textContent=l.reduce((a,p)=>a+pedido[p.id],0);
   document.getElementById("conteo").textContent=l.length?`· ${l.length} ítems`:"";
   const t=totalesDe(lineasActuales());
-  document.getElementById("etIva").textContent=(DB.config.iva||0)+"%";
   const hay=hayPrecios()&&t.neto>0;
-  document.getElementById("tNeto").textContent=hay?plata(t.neto):"—";
-  document.getElementById("tIva").textContent=hay?plata(t.iva):"—";
   document.getElementById("tTotal").textContent=hay?plata(t.total):"Sin precios";
 }
 function sumar(id,d){fijar(id,(pedido[id]||0)+d)}
@@ -631,19 +626,19 @@ function excelDe(id){const p=DB.pedidos.find(x=>x.id===id);aExcel(p,p.lineas,hay
 function aExcel(d,lineas,precios){
   const arch=`Pedido_${(d.cliente||"sin-cliente").replace(/[^\w\-]+/g,"_")}_${d.fecha||""}`;
   const conPlata=precios&&d.totales&&d.totales.neto>0;
+  const fx=1+((d.ivaPct??DB.config.iva)||0)/100;
   const filas=[["PEDIDO PIPER POL"],["Cliente",d.cliente],["Teléfono",d.tel],["Localidad",d.localidad],
     ["Vendedor",d.vendedor],["Fecha",d.fecha],["Entrega",d.entrega],["Observaciones",d.obs],[]];
-  filas.push(conPlata?["Rubro","Producto","Se pide por","Cantidad (unidades)","Precio unit. neto","Subtotal neto","Preparado"]
+  filas.push(conPlata?["Rubro","Producto","Se pide por","Cantidad (unidades)","Precio unit.","Subtotal","Preparado"]
                      :["Rubro","Producto","Se pide por","Cantidad (unidades)","Preparado"]);
-  lineas.forEach(l=>filas.push(conPlata?[l.rubro,l.nombre,l.pres,l.cant,l.unit,l.unit*l.cant,""]
-                                       :[l.rubro,l.nombre,l.pres,l.cant,""]));
+  lineas.forEach(l=>{const unitFinal=l.unit*fx;
+    filas.push(conPlata?[l.rubro,l.nombre,l.pres,l.cant,unitFinal,unitFinal*l.cant,""]
+                       :[l.rubro,l.nombre,l.pres,l.cant,""])});
   filas.push([]);
   filas.push(conPlata?["","","TOTAL DE UNIDADES",lineas.reduce((a,l)=>a+l.cant,0),"","",""]
                      :["","","TOTAL DE UNIDADES",lineas.reduce((a,l)=>a+l.cant,0),""]);
   if(conPlata){
-    filas.push(["","","","","Neto",d.totales.neto,""]);
-    filas.push(["","","","",`IVA ${d.ivaPct??DB.config.iva}%`,d.totales.iva,""]);
-    filas.push(["","","","","TOTAL",d.totales.total,""]);
+    filas.push(["","","","","TOTAL DEL PEDIDO",d.totales.total,""]);
   }
   if(typeof XLSX==="undefined"){bajarCSV(filas,arch+".csv");return}
   const h=XLSX.utils.aoa_to_sheet(filas);
