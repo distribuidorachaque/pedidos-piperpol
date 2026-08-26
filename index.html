@@ -115,7 +115,16 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   tr{border-bottom:1px solid var(--linea);padding:6px 0}
   td{border:none;padding:4px 12px}
   td.num,td.acc{text-align:left}
+  #v-pedido{padding-bottom:64px}
+  .barra-movil.ver{display:flex}
 }
+.barra-movil{
+  display:none;position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:var(--verde);color:#fff;padding:12px 18px;align-items:center;justify-content:space-between;
+  box-shadow:0 -6px 16px rgba(0,0,0,.18);border:none;width:100%;font:inherit;cursor:pointer;
+}
+.barra-movil b{font-size:16px}
+.barra-movil span{font-size:12px;opacity:.85}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -169,7 +178,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
     <div id="catalogo"></div>
   </div>
 
-  <aside>
+  <aside id="asideResumen">
     <h2>Pedido <span id="conteo" style="font-weight:400;color:var(--gris);font-size:14px"></span></h2>
     <div class="resumen" id="resumen"></div>
     <div class="pie">
@@ -181,6 +190,10 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
       <button class="btn rojo" onclick="limpiar()">Vaciar pedido</button>
     </div>
   </aside>
+  <button class="barra-movil" id="barraMovil" onclick="irAlResumen()">
+    <span><b id="barraTexto">0 unidades</b><br><span>Tocá para ver el pedido</span></span>
+    <b id="barraTotal">—</b>
+  </button>
 </div>
 </div>
 
@@ -261,7 +274,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 23:20</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 23:55</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -385,11 +398,19 @@ function pintarResumen(){
       ${st?`<span class="plata">${plata(st)}</span>`:""}
       <button class="quitar" aria-label="Quitar ${esc(p.nombre)}" onclick="fijar('${p.id}',0)">×</button></div>`}).join("")
     :`<div class="vacio">Todavía no cargaste productos. Buscá arriba y tocá +.</div>`;
-  document.getElementById("bultos").textContent=l.reduce((a,p)=>a+pedido[p.id],0);
+  const bultos=l.reduce((a,p)=>a+pedido[p.id],0);
+  document.getElementById("bultos").textContent=bultos;
   document.getElementById("conteo").textContent=l.length?`· ${l.length} ítems`:"";
   const t=totalesDe(lineasActuales());
   const hay=hayPrecios()&&t.neto>0;
   document.getElementById("tTotal").textContent=hay?plata(t.total):"Sin precios";
+  const barra=document.getElementById("barraMovil");
+  barra.classList.toggle("ver",bultos>0);
+  document.getElementById("barraTexto").textContent=`${bultos} unidad${bultos===1?"":"es"} · ${l.length} ítem${l.length===1?"":"s"}`;
+  document.getElementById("barraTotal").textContent=hay?plata(t.total):"";
+}
+function irAlResumen(){
+  document.getElementById("asideResumen").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function sumar(id,d){fijar(id,(pedido[id]||0)+d)}
 function fijar(id,v){v=Math.max(0,parseInt(v)||0);if(v)pedido[id]=v;else delete pedido[id];pintar()}
