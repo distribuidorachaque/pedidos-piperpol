@@ -51,11 +51,14 @@ textarea{resize:vertical;min-height:58px}
 .lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px}
 .item{display:flex;align-items:center;gap:10px;background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:8px 10px}
 .item.activo{border-color:var(--verde-claro);box-shadow:inset 4px 0 0 var(--verde-claro)}
+.item.sin-stock{opacity:.55}
 .item .nombre{flex:1;min-width:0;line-height:1.25}
 .item .nombre small{display:block;color:var(--gris);font-size:11px}
 .cant{display:flex;align-items:center;gap:4px}
 .cant button{width:30px;height:30px;border-radius:8px;border:1px solid var(--linea);background:var(--papel);font-weight:700;color:var(--verde);line-height:1}
 .cant button:hover{background:var(--verde);color:#fff;border-color:var(--verde)}
+.cant button:disabled{opacity:.4;cursor:not-allowed}
+.cant button:disabled:hover{background:var(--papel);color:var(--verde);border-color:var(--linea)}
 .cant input{width:52px;text-align:center;padding:6px 4px}
 aside h2{font-size:18px;padding:14px 16px;border-bottom:1px solid var(--linea)}
 .resumen{max-height:38vh;overflow:auto;padding:6px 0}
@@ -138,6 +141,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
     <button id="tab-clientes" onclick="ver('clientes')">Clientes</button>
     <button id="tab-historial" onclick="ver('historial')">Historial</button>
     <button id="tab-precios" onclick="ver('precios')">Precios</button>
+    <button id="tab-stock" onclick="ver('stock')">Stock</button>
     <button id="tab-numeros" onclick="ver('numeros')">Mis números</button>
   </nav>
   <div class="acciones">
@@ -242,6 +246,26 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   </div>
 </div>
 
+<!-- ============ STOCK ============ -->
+<div id="v-stock" class="pagina oculto">
+  <div class="tarjeta">
+    <h2>Stock del depósito</h2>
+    <p class="sub" id="subStock">Un número por producto: lo que hay disponible ahora. Se descuenta solo cuando guardás un pedido.</p>
+    <div class="fila-sup">
+      <button class="btn chico linea" onclick="plantillaStock()">Descargar plantilla en Excel</button>
+      <button class="btn chico linea" onclick="document.getElementById('archStock').click()">Cargar plantilla completada</button>
+      <input type="file" id="archStock" accept=".csv" class="oculto" onchange="importarStock(this)">
+      <button class="btn chico rojo" onclick="borrarStock()">Borrar todo</button>
+    </div>
+    <div class="buscador" style="margin-top:14px">
+      <input id="qs" placeholder="Buscar producto para cargar su stock" oninput="pintarStock()">
+      <select id="marcaS" onchange="cambioMarcaS()"></select>
+      <select id="rubroS" onchange="pintarStock()"></select>
+    </div>
+    <div id="listaStock"></div>
+  </div>
+</div>
+
 <!-- ============ MIS NÚMEROS ============ -->
 <div id="v-numeros" class="pagina oculto">
   <div class="tarjeta">
@@ -274,7 +298,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-24 · 23:55</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 01:05</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -291,7 +315,7 @@ const CATALOGO=[
  {marca:"Piper Pol",rubro:"Yerba mate compuesta",pres:"Paquete de 500 gr",caja:"Caja cerrada: 12 paquetes",items:["Piper Pol con hierbas serranas","Piper Pol naranja-limón","Piper Pol con jengibre","Piper Pol con boldo"]},
  {marca:"Piper Pol",rubro:"Valle Verde",pres:"Paquete de 500 gr",caja:"",items:[{n:"Hierbas serranas con yerba mate",p:"Paquete de 500 gr"},{n:"Té en saquitos",p:"Estuche de 25 saquitos x 2 gr"}]},
  {marca:"Piper Pol",rubro:"Suplementos",pres:"Pote",caja:"",items:[{n:"PuroVitam",p:"Pote de 800 gr"}]},
- {marca:"Andino",rubro:"Gotas",pres:"Frasco (tamaño a confirmar)",caja:"",items:["Tranquilizante","Asma","Ansiolítico","Antiespasmódico","Várices","Digestivo (fórmula 6)","Revital","Inmunológico","Obesidad","Reumatismo","Laxante","Parásitos","Colesterol","Tónico cerebral","Energizante","Celulitis","Diabetes","Migrañas","Diurético","Digestivo (fórmula 20)","Menopausia","Gripe","Presión alta","Ácido úrico","Hepático","Insomnio","Circulatorio","Cistitis","Acidez-úlcera","Neuroactivador"]},
+ {marca:"Andino",rubro:"Gotas",pres:"Frasco (tamaño a confirmar)",caja:"",items:["N°1 · Tranquilizante","N°2 · Asma","N°3 · Ansiolítico","N°4 · Antiespasmódico","N°5 · Várices","N°6 · Digestivo (fórmula 6)","N°7 · Revital","N°8 · Inmunológico","N°9 · Obesidad","N°10 · Reumatismo","N°11 · Laxante","N°12 · Parásitos","N°13 · Colesterol","N°14 · Tónico cerebral","N°15 · Energizante","N°16 · Celulitis","N°17 · Diabetes","N°18 · Migrañas","N°19 · Diurético","N°20 · Digestivo (fórmula 20)","N°21 · Menopausia","N°22 · Gripe","N°23 · Presión alta","N°24 · Ácido úrico","N°25 · Hepático","N°26 · Insomnio","N°27 · Circulatorio","N°28 · Cistitis","N°29 · Acidez-úlcera","N°30 · Neuroactivador"]},
  {marca:"Andino",rubro:"Otros",pres:"Frasco",caja:"",items:[{n:"Aceite de orégano",p:"Frasco de 30 cc"}]},
  {marca:"PGN",rubro:"Cápsulas y comprimidos",pres:"Blíster",caja:"",items:[{n:"Aminoácidos total",p:"Blíster de 100 cápsulas"},{n:"Colágeno + Magnesio",p:"Blíster de 30 cápsulas"},{n:"Creatina",p:"Blíster de 100 cápsulas"},{n:"Cúrcuma",p:"Blíster de 100 cápsulas"},{n:"Espirulina",p:"Blíster de 100 cápsulas"},{n:"Fucus complex",p:"Blíster de 100 cápsulas"},{n:"Lisin C (vitamina C)",p:"Blíster de 100 comprimidos"},{n:"Moringa",p:"Blíster de 100 cápsulas"},{n:"Redumax forte",p:"Blíster de 100 cápsulas"},{n:"Colágeno solar (cápsulas)",p:"Blíster de 30 cápsulas, con betacaroteno"},{n:"Magnesio energy",p:"Blíster de 30 comprimidos"},{n:"Magnesio relax",p:"Blíster de 30 comprimidos"},{n:"Maka forte",p:"Blíster de 30 cápsulas"}]},
  {marca:"PGN",rubro:"Gotas de hongos medicinales",pres:"Frasco de 60 cc",caja:"",items:["Maitake","Reishi","Shiitake","Tremella","Melena de león"]},
@@ -305,7 +329,7 @@ const porId=id=>PRODUCTOS.find(p=>p.id===id);
 
 /* ================= guardado ================= */
 const CLAVE="piperpol_datos_v2";
-let DB={clientes:[],pedidos:[],precios:{},config:{comision:15,iva:21,tipo:"neto"}};
+let DB={clientes:[],pedidos:[],precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto"}};
 let guardaOk=true;
 const store={
   async leer(){
@@ -344,29 +368,32 @@ const hayPrecios=()=>Object.keys(DB.precios).length>0;
 function avisar(t){const a=document.getElementById("aviso");a.textContent=t;a.classList.add("ver");clearTimeout(a._t);a._t=setTimeout(()=>a.classList.remove("ver"),2600)}
 
 function ver(p){
-  ["pedido","clientes","historial","precios","numeros"].forEach(x=>{
+  ["pedido","clientes","historial","precios","stock","numeros"].forEach(x=>{
     document.getElementById("v-"+x).classList.toggle("oculto",x!==p);
     document.getElementById("tab-"+x).classList.toggle("on",x===p);
   });
   if(p==="clientes")pintarClientes();
   if(p==="historial")pintarHistorial();
   if(p==="precios")pintarPrecios();
+  if(p==="stock")pintarStock();
   if(p==="numeros")pintarNumeros();
 }
 
 /* ================= catálogo / pedido ================= */
 const selMarca=document.getElementById("marca"), selRubro=document.getElementById("rubro");
 const selMarcaP=document.getElementById("marcaP"), selRubroP=document.getElementById("rubroP");
+const selMarcaS=document.getElementById("marcaS"), selRubroS=document.getElementById("rubroS");
 const MARCAS=[...new Set(CATALOGO.map(g=>g.marca))];
 const opcionesMarca='<option value="">Todas las marcas</option>'+MARCAS.map(m=>`<option>${m}</option>`).join("");
-selMarca.innerHTML=opcionesMarca; selMarcaP.innerHTML=opcionesMarca;
+selMarca.innerHTML=opcionesMarca; selMarcaP.innerHTML=opcionesMarca; selMarcaS.innerHTML=opcionesMarca;
 function opcionesRubroPara(marca){
   const rubros=CATALOGO.filter(g=>!marca||g.marca===marca).map(g=>g.rubro);
   return '<option value="">Todos los rubros</option>'+rubros.map(r=>`<option>${r}</option>`).join("");
 }
-selRubro.innerHTML=opcionesRubroPara(""); selRubroP.innerHTML=opcionesRubroPara("");
+selRubro.innerHTML=opcionesRubroPara(""); selRubroP.innerHTML=opcionesRubroPara(""); selRubroS.innerHTML=opcionesRubroPara("");
 function cambioMarca(){ selRubro.innerHTML=opcionesRubroPara(selMarca.value); pintar(); }
 function cambioMarcaP(){ selRubroP.innerHTML=opcionesRubroPara(selMarcaP.value); pintarPrecios(); }
+function cambioMarcaS(){ selRubroS.innerHTML=opcionesRubroPara(selMarcaS.value); pintarStock(); }
 document.getElementById("fecha").valueAsDate=new Date();
 
 function pintar(){
@@ -379,10 +406,17 @@ function pintar(){
     html+=`<section class="rubro"><h3>${g.marca} · ${g.rubro}</h3><div class="presentacion">Se pide por <strong>${g.pres.toLowerCase()}</strong>${g.caja?" · "+g.caja+" (referencia)":""}</div><div class="lista">`;
     vis.forEach(p=>{const c=pedido[p.id]||0, pr=DB.precios[p.id];
       const pesoPropio = p.pres && norm(p.pres)!==norm(g.pres);
-      html+=`<div class="item ${c?"activo":""}"><div class="nombre">${esc(p.nombre)}${pesoPropio?`<small>${esc(p.pres)}</small>`:""}${pr?`<small>${plata(precioFinalUnit(p.id))}</small>`:""}</div><div class="cant">
+      const st=stockTrackeado(p.id)?DB.stock[p.id]:null;
+      const sinStock = st!==null && st<=0;
+      const topeAlcanzado = st!==null && c>=st;
+      let badgeStock="";
+      if(st!==null){
+        badgeStock = sinStock ? `<small style="color:var(--bordo)">Sin stock</small>` : `<small style="color:var(--gris)">Quedan ${st}</small>`;
+      }
+      html+=`<div class="item ${c?"activo":""} ${sinStock?"sin-stock":""}"><div class="nombre">${esc(p.nombre)}${pesoPropio?`<small>${esc(p.pres)}</small>`:""}${pr?`<small>${plata(precioFinalUnit(p.id))}</small>`:""}${badgeStock}</div><div class="cant">
         <button aria-label="Quitar uno de ${esc(p.nombre)}" onclick="sumar('${p.id}',-1)">−</button>
-        <input type="number" min="0" value="${c}" aria-label="Cantidad de ${esc(p.nombre)}" onchange="fijar('${p.id}',this.value)">
-        <button aria-label="Agregar uno de ${esc(p.nombre)}" onclick="sumar('${p.id}',1)">+</button></div></div>`;
+        <input type="number" min="0" ${st!==null?`max="${st}"`:""} value="${c}" aria-label="Cantidad de ${esc(p.nombre)}" onchange="fijar('${p.id}',this.value)">
+        <button aria-label="Agregar uno de ${esc(p.nombre)}" onclick="sumar('${p.id}',1)" ${topeAlcanzado?"disabled":""}>+</button></div></div>`;
     });
     html+="</div></section>";
   });
@@ -413,7 +447,13 @@ function irAlResumen(){
   document.getElementById("asideResumen").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function sumar(id,d){fijar(id,(pedido[id]||0)+d)}
-function fijar(id,v){v=Math.max(0,parseInt(v)||0);if(v)pedido[id]=v;else delete pedido[id];pintar()}
+function fijar(id,v){
+  v=Math.max(0,parseInt(v)||0);
+  const tope=stockDe(id);
+  if(v>tope){v=tope;avisar(tope<=0?"No queda stock de este producto":`Solo quedan ${tope} en el depósito`)}
+  if(v)pedido[id]=v;else delete pedido[id];
+  pintar();
+}
 function limpiar(){
   if(!Object.keys(pedido).length)return;
   if(!confirm("¿Vaciar todo el pedido?"))return;
@@ -490,7 +530,8 @@ async function guardarPedido(){
   const c=await sincronizarCliente();
   DB.pedidos.unshift({id:"p"+Date.now(),clienteId:c.id,...cabecera(),lineas:l,
     bultos:l.reduce((a,x)=>a+x.cant,0),totales:totalesDe(l),ivaPct:DB.config.iva,pagos:[]});
-  await persistir();avisar("Pedido guardado en el historial");
+  l.forEach(x=>{ if(stockTrackeado(x.id)) DB.stock[x.id]=Math.max(0,DB.stock[x.id]-x.cant); });
+  await persistir();pintarStock();avisar("Pedido guardado en el historial");
 }
 function pintarHistorial(){
   const cont=document.getElementById("tablaHistorial");
@@ -512,11 +553,20 @@ function pintarHistorial(){
 function repetir(id){
   const p=DB.pedidos.find(x=>x.id===id);
   Object.keys(pedido).forEach(k=>delete pedido[k]);
-  p.lineas.forEach(l=>{const prod=l.id?porId(l.id):PRODUCTOS.find(x=>x.rubro===l.rubro&&x.nombre===l.nombre);if(prod)pedido[prod.id]=l.cant});
+  let recortados=0;
+  p.lineas.forEach(l=>{
+    const prod=l.id?porId(l.id):PRODUCTOS.find(x=>x.rubro===l.rubro&&x.nombre===l.nombre);
+    if(!prod)return;
+    let cant=l.cant;
+    const tope=stockDe(prod.id);
+    if(cant>tope){cant=tope;recortados++}
+    if(cant>0)pedido[prod.id]=cant;
+  });
   clienteActivo=p.clienteId;
   set("cliente",p.cliente);set("tel",p.tel);set("localidad",p.localidad);set("vendedor",p.vendedor);set("entrega",p.entrega);set("obs",p.obs);
   document.getElementById("fecha").valueAsDate=new Date();
-  pintarSelector();ver("pedido");pintar();avisar("Pedido cargado para editar");
+  pintarSelector();ver("pedido");pintar();
+  avisar(recortados?`Pedido cargado, pero ${recortados} producto(s) se ajustaron por falta de stock`:"Pedido cargado para editar");
 }
 async function borrarPedido(id){
   if(!confirm("¿Borrar este pedido del historial?"))return;
@@ -645,6 +695,60 @@ function importarPrecios(input){
   r.readAsText(f);
 }
 
+/* ================= stock del depósito ================= */
+const stockTrackeado=id=>DB.stock[id]!==undefined&&DB.stock[id]!==null;
+const stockDe=id=>stockTrackeado(id)?DB.stock[id]:Infinity;
+function pintarStock(){
+  const q=norm(val("qs")),r=selRubroS.value,m=selMarcaS.value;let html="";
+  CATALOGO.forEach(g=>{
+    if(m&&g.marca!==m)return;
+    if(r&&g.rubro!==r)return;
+    const vis=PRODUCTOS.filter(p=>p.marca===g.marca&&p.rubro===g.rubro&&(!q||norm(p.nombre).includes(q)));
+    if(!vis.length)return;
+    html+=`<section class="rubro"><h3>${g.marca} · ${g.rubro}</h3><div class="presentacion">Unidades disponibles por ${g.pres.toLowerCase()}</div>`;
+    vis.forEach(p=>{html+=`<div class="precio-fila"><div class="n">${esc(p.nombre)}<small>${p.pres}</small></div>
+      <input type="number" min="0" step="1" placeholder="sin controlar" value="${stockTrackeado(p.id)?DB.stock[p.id]:""}" onchange="fijarStock('${p.id}',this.value)"></div>`});
+    html+="</section>";
+  });
+  document.getElementById("listaStock").innerHTML=html||`<div class="vacio">Sin resultados.</div>`;
+  const c=Object.keys(DB.stock).length;
+  document.getElementById("subStock").textContent=
+    `Un número por producto: lo que hay disponible ahora. Se descuenta solo cuando guardás un pedido. ${c} de ${PRODUCTOS.length} productos con stock controlado; el resto se puede pedir sin límite.`;
+}
+function fijarStock(id,v){
+  const n=parseInt(v);
+  if(v===""||isNaN(n))delete DB.stock[id];else DB.stock[id]=Math.max(0,n);
+  persistir();pintarStock();pintar();
+}
+function borrarStock(){
+  if(!confirm("¿Dejar de controlar el stock de todos los productos? (se puede volver a cargar cuando quieras)"))return;
+  DB.stock={};persistir();pintarStock();pintar();avisar("Stock borrado, ahora se puede pedir sin límite");
+}
+function plantillaStock(){
+  const filas=[["codigo","rubro","producto","se_pide_por","stock"]];
+  PRODUCTOS.forEach(p=>filas.push([p.id,p.rubro,p.nombre,p.pres,stockTrackeado(p.id)?DB.stock[p.id]:""]));
+  bajarCSV(filas,"plantilla-stock-deposito.csv");
+  avisar("Completá la columna stock y volvé a cargarla");
+}
+function importarStock(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    const lineas=r.result.replace(/^\uFEFF/,"").split(/\r?\n/).filter(x=>x.trim());
+    let n=0;
+    lineas.slice(1).forEach(li=>{
+      const c=li.split(/;|\t/).map(x=>x.replace(/^"|"$/g,"").trim());
+      if(c.length<5)return;
+      const id=c[0], cant=parseInt(c[4]);
+      if(porId(id)&&c[4]!==""&&!isNaN(cant)){DB.stock[id]=Math.max(0,cant);n++}
+    });
+    await persistir();pintarStock();pintar();
+    avisar(n?`Stock de ${n} productos cargado`:"No se encontró stock para cargar en el archivo");
+    input.value="";
+  };
+  r.readAsText(f);
+}
+
 /* ================= mis números ================= */
 function mesDe(p){return(p.fecha||"").slice(0,7)}
 function netoCobrado(p){
@@ -746,7 +850,7 @@ function restaurar(input){
       const d=JSON.parse(r.result);
       if(!d.clientes||!d.pedidos)throw 0;
       if(!confirm(`La copia tiene ${d.clientes.length} clientes y ${d.pedidos.length} pedidos. Reemplaza lo que hay ahora. ¿Seguir?`))return;
-      DB={precios:{},config:{comision:15,iva:21,tipo:"neto"},...d};
+      DB={precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto"},...d};
       await persistir();arrancarUI();avisar("Copia restaurada");
     }catch(e){avisar("El archivo no es una copia válida")}
     input.value="";
@@ -761,7 +865,7 @@ function arrancarUI(){
 }
 (async()=>{
   const d=await store.leer();
-  if(d&&d.clientes)DB={precios:{},config:{comision:15,iva:21,tipo:"neto"},...d,
+  if(d&&d.clientes)DB={precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto"},...d,
     config:{comision:15,iva:21,tipo:"neto",...(d.config||{})}};
   if(!guardaOk)document.getElementById("alerta").classList.add("ver");
   arrancarUI();
