@@ -18,7 +18,7 @@ nav button{background:transparent;border:1px solid transparent;color:rgba(255,25
 nav button:hover{color:#fff;background:rgba(255,255,255,.12)}
 nav button.on{background:#fff;color:var(--verde);font-weight:600}
 .acciones{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-.btn{border:1px solid transparent;border-radius:999px;padding:9px 16px;background:#fff;color:var(--verde);font-weight:600}
+.btn{display:inline-block;border:1px solid transparent;border-radius:999px;padding:9px 16px;background:#fff;color:var(--verde);font-weight:600;text-decoration:none}
 .btn:hover{background:var(--papel)}
 .btn.fantasma{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
 .btn.fantasma:hover{background:rgba(255,255,255,.12)}
@@ -83,7 +83,7 @@ td{padding:10px 12px;border-bottom:1px solid var(--linea);vertical-align:top}
 tr:last-child td{border-bottom:none}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.acc{white-space:nowrap;text-align:right}
-td.acc button{margin-left:4px}
+td.acc button,td.acc a{margin-left:4px}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.03em}
 .pill.pend{background:#fdece9;color:#a3341c}
 .pill.parc{background:#fdf5d6;color:#7a6410}
@@ -172,6 +172,14 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
         <div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
         <div><label for="entrega">Entrega</label><select id="entrega"><option>Retira en depósito</option><option>Envío por transporte</option><option>Reparto propio</option></select></div>
         <div><label for="facturado">Factura</label><select id="facturado"><option value="no">Sin factura</option><option value="si">Con factura</option></select></div>
+      </div>
+      <div style="margin-top:10px">
+        <label for="direccion">Dirección</label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <input id="direccion" placeholder="Calle y número" style="flex:1">
+          <button type="button" class="btn chico linea" style="white-space:nowrap" onclick="geolocalizarCliente()">📍 Usar mi ubicación</button>
+        </div>
+        <div id="geoEstado" style="font-size:12px;color:var(--gris);margin-top:4px"></div>
       </div>
       <div style="margin-top:10px"><label for="obs">Observaciones</label><textarea id="obs" placeholder="Aclaraciones para preparar el pedido"></textarea></div>
     </div>
@@ -299,7 +307,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 01:40</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 02:15</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -349,7 +357,7 @@ async function persistir(){
 
 /* ================= utilidades ================= */
 const pedido={};
-let clienteActivo=null, pedidoEnPagos=null;
+let clienteActivo=null, pedidoEnPagos=null, geoActual=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 const val=id=>document.getElementById(id).value.trim();
@@ -481,20 +489,40 @@ function cargarCliente(id){
   clienteActivo=id||null;
   const c=DB.clientes.find(x=>x.id===id);
   if(!c){nuevoCliente();return}
-  set("cliente",c.nombre);set("tel",c.tel);set("localidad",c.localidad);
+  set("cliente",c.nombre);set("tel",c.tel);set("localidad",c.localidad);set("direccion",c.direccion);
   if(c.entrega)set("entrega",c.entrega);
   if(c.facturado)set("facturado",c.facturado);
+  geoActual=(c.lat!=null&&c.lng!=null)?{lat:c.lat,lng:c.lng}:null;
+  pintarGeoEstado();
   avisar("Datos de "+c.nombre+" cargados");
 }
 function nuevoCliente(){
-  clienteActivo=null;["cliente","tel","localidad"].forEach(i=>set(i,""));
-  pintarSelector();document.getElementById("cliente").focus();
+  clienteActivo=null;geoActual=null;["cliente","tel","localidad","direccion"].forEach(i=>set(i,""));
+  pintarGeoEstado();pintarSelector();document.getElementById("cliente").focus();
+}
+function pintarGeoEstado(){
+  const el=document.getElementById("geoEstado");
+  el.innerHTML=geoActual?`📍 Ubicación guardada — <a href="https://www.google.com/maps?q=${geoActual.lat},${geoActual.lng}" target="_blank" rel="noopener">ver en el mapa</a>`:"";
+}
+function geolocalizarCliente(){
+  if(!navigator.geolocation){avisar("Este navegador no permite geolocalización");return}
+  document.getElementById("geoEstado").textContent="Buscando tu ubicación...";
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      geoActual={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      pintarGeoEstado();
+      avisar("Ubicación capturada");
+    },
+    err=>{ pintarGeoEstado(); avisar("No se pudo obtener la ubicación (¿diste el permiso?)"); },
+    {enableHighAccuracy:true,timeout:12000}
+  );
 }
 async function sincronizarCliente(){
   const nombre=val("cliente");if(!nombre)return null;
   let c=DB.clientes.find(x=>x.id===clienteActivo)||DB.clientes.find(x=>norm(x.nombre)===norm(nombre));
   if(!c){c={id:"c"+Date.now(),nombre};DB.clientes.push(c)}
-  c.nombre=nombre;c.tel=val("tel");c.localidad=val("localidad");c.entrega=val("entrega");c.facturado=val("facturado");
+  c.nombre=nombre;c.tel=val("tel");c.localidad=val("localidad");c.direccion=val("direccion");c.entrega=val("entrega");c.facturado=val("facturado");
+  if(geoActual){c.lat=geoActual.lat;c.lng=geoActual.lng}
   clienteActivo=c.id;await persistir();pintarSelector();return c;
 }
 function pintarClientes(){
@@ -503,8 +531,10 @@ function pintarClientes(){
   cont.innerHTML=`<table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Localidad</th><th class="num">Pedidos</th><th></th></tr></thead><tbody>`+
     DB.clientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>{
       const n=DB.pedidos.filter(p=>p.clienteId===c.id).length;
-      return `<tr><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.tel)||"—"}</td><td>${esc(c.localidad)||"—"}</td><td class="num">${n}</td>
-      <td class="acc"><button class="btn chico linea" onclick="pedidoPara('${c.id}')">Nuevo pedido</button>
+      const linkMapa=c.lat!=null&&c.lng!=null?`https://www.google.com/maps?q=${c.lat},${c.lng}`
+        :c.direccion?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.direccion+" "+(c.localidad||""))}`:null;
+      return `<tr><td><strong>${esc(c.nombre)}</strong>${c.direccion?`<br><small style="color:var(--gris)">${esc(c.direccion)}</small>`:""}</td><td>${esc(c.tel)||"—"}</td><td>${esc(c.localidad)||"—"}</td><td class="num">${n}</td>
+      <td class="acc">${linkMapa?`<a class="btn chico linea" href="${linkMapa}" target="_blank" rel="noopener">🗺️ Mapa</a>`:""}<button class="btn chico linea" onclick="pedidoPara('${c.id}')">Nuevo pedido</button>
       <button class="btn chico rojo" onclick="borrarCliente('${c.id}')">Borrar</button></td></tr>`}).join("")+"</tbody></table>";
 }
 function pedidoPara(id){ver("pedido");document.getElementById("selCliente").value=id;cargarCliente(id)}
