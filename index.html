@@ -171,6 +171,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
         <div><label for="vendedor">Vendedor</label><input id="vendedor" placeholder="Quién toma el pedido"></div>
         <div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
         <div><label for="entrega">Entrega</label><select id="entrega"><option>Retira en depósito</option><option>Envío por transporte</option><option>Reparto propio</option></select></div>
+        <div><label for="facturado">Factura</label><select id="facturado"><option value="no">Sin factura</option><option value="si">Con factura</option></select></div>
       </div>
       <div style="margin-top:10px"><label for="obs">Observaciones</label><textarea id="obs" placeholder="Aclaraciones para preparar el pedido"></textarea></div>
     </div>
@@ -298,7 +299,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 01:05</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 01:40</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -482,6 +483,7 @@ function cargarCliente(id){
   if(!c){nuevoCliente();return}
   set("cliente",c.nombre);set("tel",c.tel);set("localidad",c.localidad);
   if(c.entrega)set("entrega",c.entrega);
+  if(c.facturado)set("facturado",c.facturado);
   avisar("Datos de "+c.nombre+" cargados");
 }
 function nuevoCliente(){
@@ -492,7 +494,7 @@ async function sincronizarCliente(){
   const nombre=val("cliente");if(!nombre)return null;
   let c=DB.clientes.find(x=>x.id===clienteActivo)||DB.clientes.find(x=>norm(x.nombre)===norm(nombre));
   if(!c){c={id:"c"+Date.now(),nombre};DB.clientes.push(c)}
-  c.nombre=nombre;c.tel=val("tel");c.localidad=val("localidad");c.entrega=val("entrega");
+  c.nombre=nombre;c.tel=val("tel");c.localidad=val("localidad");c.entrega=val("entrega");c.facturado=val("facturado");
   clienteActivo=c.id;await persistir();pintarSelector();return c;
 }
 function pintarClientes(){
@@ -515,7 +517,7 @@ async function borrarCliente(id){
 }
 
 /* ================= historial ================= */
-function cabecera(){return{cliente:val("cliente"),tel:val("tel"),localidad:val("localidad"),vendedor:val("vendedor"),fecha:val("fecha"),entrega:val("entrega"),obs:val("obs")}}
+function cabecera(){return{cliente:val("cliente"),tel:val("tel"),localidad:val("localidad"),vendedor:val("vendedor"),fecha:val("fecha"),entrega:val("entrega"),facturado:val("facturado"),obs:val("obs")}}
 const cobrado=p=>(p.pagos||[]).reduce((a,x)=>a+x.monto,0);
 function estado(p){
   const c=cobrado(p);
@@ -539,7 +541,7 @@ function pintarHistorial(){
   cont.innerHTML=`<table><thead><tr><th>Fecha</th><th>Cliente</th><th class="num">Unid.</th><th class="num">Total</th><th>Cobro</th><th></th></tr></thead><tbody>`+
     DB.pedidos.map(p=>{const e=estado(p),c=cobrado(p);
       return `<tr><td>${esc(p.fecha)||"—"}</td>
-      <td><strong>${esc(p.cliente)}</strong><br><small style="color:var(--gris)">${esc(p.localidad)}</small></td>
+      <td><strong>${esc(p.cliente)}</strong><br><small style="color:var(--gris)">${esc(p.localidad)}${p.facturado==="si"?" · Con factura":""}</small></td>
       <td class="num">${p.bultos}</td>
       <td class="num">${p.totales.total?plata(p.totales.total):"—"}</td>
       <td><span class="pill ${e.cls}">${e.txt}</span>${c?`<br><small style="color:var(--gris)">${plata(c)}</small>`:""}</td>
@@ -563,7 +565,7 @@ function repetir(id){
     if(cant>0)pedido[prod.id]=cant;
   });
   clienteActivo=p.clienteId;
-  set("cliente",p.cliente);set("tel",p.tel);set("localidad",p.localidad);set("vendedor",p.vendedor);set("entrega",p.entrega);set("obs",p.obs);
+  set("cliente",p.cliente);set("tel",p.tel);set("localidad",p.localidad);set("vendedor",p.vendedor);set("entrega",p.entrega);set("facturado",p.facturado||"no");set("obs",p.obs);
   document.getElementById("fecha").valueAsDate=new Date();
   pintarSelector();ver("pedido");pintar();
   avisar(recortados?`Pedido cargado, pero ${recortados} producto(s) se ajustaron por falta de stock`:"Pedido cargado para editar");
@@ -792,8 +794,9 @@ function aExcel(d,lineas,precios){
   const arch=`Pedido_${(d.cliente||"sin-cliente").replace(/[^\w\-]+/g,"_")}_${d.fecha||""}`;
   const conPlata=precios&&d.totales&&d.totales.neto>0;
   const fx=1+((d.ivaPct??DB.config.iva)||0)/100;
+  const facturado=d.facturado==="si";
   const filas=[["PEDIDO PIPER POL"],["Cliente",d.cliente],["Teléfono",d.tel],["Localidad",d.localidad],
-    ["Vendedor",d.vendedor],["Fecha",d.fecha],["Entrega",d.entrega],["Observaciones",d.obs],[]];
+    ["Vendedor",d.vendedor],["Fecha",d.fecha],["Entrega",d.entrega],["Factura",facturado?"Sí":"No"],["Observaciones",d.obs],[]];
   filas.push(conPlata?["Rubro","Producto","Se pide por","Cantidad (unidades)","Precio unit.","Subtotal","Preparado"]
                      :["Rubro","Producto","Se pide por","Cantidad (unidades)","Preparado"]);
   lineas.forEach(l=>{const unitFinal=l.unit*fx;
@@ -803,7 +806,13 @@ function aExcel(d,lineas,precios){
   filas.push(conPlata?["","","TOTAL DE UNIDADES",lineas.reduce((a,l)=>a+l.cant,0),"","",""]
                      :["","","TOTAL DE UNIDADES",lineas.reduce((a,l)=>a+l.cant,0),""]);
   if(conPlata){
-    filas.push(["","","","","TOTAL DEL PEDIDO",d.totales.total,""]);
+    if(facturado){
+      filas.push(["","","","","Neto",d.totales.neto,""]);
+      filas.push(["","","","",`IVA ${d.ivaPct??DB.config.iva}%`,d.totales.iva,""]);
+      filas.push(["","","","","TOTAL",d.totales.total,""]);
+    }else{
+      filas.push(["","","","","TOTAL DEL PEDIDO",d.totales.total,""]);
+    }
   }
   if(typeof XLSX==="undefined"){bajarCSV(filas,arch+".csv");return}
   const h=XLSX.utils.aoa_to_sheet(filas);
