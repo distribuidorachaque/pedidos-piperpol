@@ -2,6 +2,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pedidos Piper Pol</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{--tinta:#12261c;--verde:#1f6b45;--verde-claro:#2fa871;--bordo:#8e2438;--papel:#f6f4ec;--blanco:#fff;--linea:#ddd8c8;--gris:#6d6f68;--amarillo:#c9c22a}
 *{box-sizing:border-box}
@@ -243,7 +245,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
       <button class="btn chico linea" onclick="plantillaPrecios()">Descargar plantilla en Excel</button>
       <button class="btn chico linea" onclick="document.getElementById('archPrecios').click()">Cargar plantilla completada</button>
       <input type="file" id="archPrecios" accept=".csv" class="oculto" onchange="importarPrecios(this)">
-      <button class="btn chico princ" onclick="compartirListaPrecios()">Compartir lista por marca</button>
+      <span id="botonesCompartir"></span>
       <button class="btn chico rojo" onclick="borrarPrecios()">Borrar todos</button>
     </div>
     <div class="buscador" style="margin-top:14px">
@@ -307,7 +309,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 02:15</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 03:30</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -395,6 +397,8 @@ const selMarcaS=document.getElementById("marcaS"), selRubroS=document.getElement
 const MARCAS=[...new Set(CATALOGO.map(g=>g.marca))];
 const opcionesMarca='<option value="">Todas las marcas</option>'+MARCAS.map(m=>`<option>${m}</option>`).join("");
 selMarca.innerHTML=opcionesMarca; selMarcaP.innerHTML=opcionesMarca; selMarcaS.innerHTML=opcionesMarca;
+document.getElementById("botonesCompartir").innerHTML=MARCAS.map(m=>
+  `<button class="btn chico princ" onclick="compartirListaMarca('${esc(m)}')">📄 ${esc(m)}</button>`).join(" ");
 function opcionesRubroPara(marca){
   const rubros=CATALOGO.filter(g=>!marca||g.marca===marca).map(g=>g.rubro);
   return '<option value="">Todos los rubros</option>'+rubros.map(r=>`<option>${r}</option>`).join("");
@@ -683,30 +687,57 @@ function plantillaPrecios(){
   bajarCSV(filas,"plantilla-precios-piperpol.csv");
   avisar("Completá la columna precio y volvé a cargarla");
 }
-function compartirListaPrecios(){
-  if(!hayPrecios()){avisar("Todavía no cargaste ningún precio");return}
-  const fecha=new Date().toISOString().slice(0,10);
-  if(typeof XLSX==="undefined"){avisar("No se pudo generar el Excel");return}
-  const libro=XLSX.utils.book_new();
-  let hojasConDatos=0;
-  MARCAS.forEach(marca=>{
-    const filas=[["LISTA DE PRECIOS — "+marca],["Precios finales, con IVA incluido"],[],["Rubro","Producto","Presentación","Precio"]];
-    let n=0;
-    CATALOGO.filter(g=>g.marca===marca).forEach(g=>{
-      PRODUCTOS.filter(p=>p.marca===marca&&p.rubro===g.rubro&&DB.precios[p.id]>0).forEach(p=>{
-        filas.push([g.rubro,p.nombre,p.pres,Math.round(precioFinalUnit(p.id)*100)/100]);
-        n++;
-      });
+async function compartirListaMarca(marca){
+ try{
+  const grupos=CATALOGO.filter(g=>g.marca===marca).map(g=>({
+    rubro:g.rubro,
+    filas:PRODUCTOS.filter(p=>p.marca===marca&&p.rubro===g.rubro&&DB.precios[p.id]>0)
+      .map(p=>[p.nombre,p.pres,plata(Math.round(precioFinalUnit(p.id)*100)/100)])
+  })).filter(g=>g.filas.length);
+  if(!grupos.length){avisar(`Todavía no cargaste precios de ${marca}`);return}
+  if(typeof jspdf==="undefined"||!jspdf.jsPDF){avisar("No se pudo cargar la herramienta de PDF. Revisá tu conexión y volvé a intentar.");return}
+  const {jsPDF}=jspdf;
+  const doc=new jsPDF();
+  if(typeof doc.autoTable!=="function"){avisar("No se pudo cargar el módulo de tablas del PDF. Revisá tu conexión y volvé a intentar.");return}
+  const fecha=new Date().toLocaleDateString("es-AR");
+  const anchoUtil=doc.internal.pageSize.getWidth()-28;
+  doc.setFontSize(18);doc.setTextColor(31,107,69);doc.text(marca,14,20);
+  doc.setFontSize(11);doc.setTextColor(0,0,0);doc.text("Lista de precios · "+fecha,14,28);
+  doc.setFontSize(9);doc.setTextColor(110,110,110);doc.text("Precios finales, con IVA incluido",14,34);
+  let y=42;
+  grupos.forEach(g=>{
+    if(y>265){doc.addPage();y=20}
+    doc.setFontSize(12);doc.setTextColor(31,107,69);doc.text(g.rubro,14,y);
+    y+=4;
+    doc.autoTable({
+      startY:y,
+      head:[["Producto","Presentación","Precio"]],
+      body:g.filas,
+      theme:"striped",
+      styles:{fontSize:9,textColor:[30,30,30]},
+      headStyles:{fillColor:[31,107,69],textColor:[255,255,255]},
+      alternateRowStyles:{fillColor:[246,244,236]},
+      columnStyles:{2:{halign:"right",cellWidth:28}},
+      margin:{left:14,right:14},
+      tableWidth:anchoUtil,
     });
-    if(!n)return;
-    hojasConDatos++;
-    const hoja=XLSX.utils.aoa_to_sheet(filas);
-    hoja["!cols"]=[{wch:26},{wch:34},{wch:32},{wch:14}];
-    XLSX.utils.book_append_sheet(libro,hoja,marca.slice(0,31));
+    y=doc.lastAutoTable.finalY+10;
   });
-  if(!hojasConDatos){avisar("Todavía no cargaste ningún precio");return}
-  XLSX.writeFile(libro,`Lista-precios-${fecha}.xlsx`);
-  avisar("Lista descargada, lista para compartir");
+  const nombreArch=`Lista-precios-${marca.replace(/[^\w\-]+/g,"_")}.pdf`;
+  const blob=doc.output("blob");
+  const archivo=new File([blob],nombreArch,{type:"application/pdf"});
+  if(navigator.canShare&&navigator.canShare({files:[archivo]})){
+    try{
+      await navigator.share({files:[archivo],title:"Lista de precios "+marca,text:`Lista de precios ${marca} — ${fecha}`});
+      return;
+    }catch(e){ if(e && e.name==="AbortError") return; }
+  }
+  doc.save(nombreArch);
+  avisar("PDF descargado, listo para compartir");
+ }catch(e){
+  console.error("compartirListaMarca:",e);
+  avisar("Error al generar el PDF: "+(e&&e.message?e.message:"desconocido"));
+ }
 }
 function importarPrecios(input){
   const f=input.files[0];if(!f)return;
