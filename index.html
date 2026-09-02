@@ -201,6 +201,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
       <div class="tot grande"><span>Total</span><span id="tTotal">—</span></div>
       <label class="chk"><input type="checkbox" id="conPrecios" checked> Incluir precios en el Excel</label>
       <button class="btn princ" onclick="guardarPedido()">Guardar pedido</button>
+      <button class="btn linea" onclick="compartirPedidoCliente()">💬 Compartir con el cliente</button>
       <button class="btn linea" onclick="exportarActual()">Descargar Excel</button>
       <button class="btn rojo" onclick="limpiar()">Vaciar pedido</button>
     </div>
@@ -309,7 +310,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 03:30</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 04:20</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -851,6 +852,40 @@ function exportarActual(){
   aExcel({...cabecera(),totales:totalesDe(l),ivaPct:DB.config.iva},l,document.getElementById("conPrecios").checked);
 }
 function excelDe(id){const p=DB.pedidos.find(x=>x.id===id);aExcel(p,p.lineas,hayPrecios())}
+function telWsp(tel){
+  let d=(tel||"").replace(/\D/g,"");
+  if(!d)return null;
+  if(!d.startsWith("54")){
+    d=d.replace(/^0/,"");          // saca el 0 inicial del código de área
+    d=d.replace(/^(\d{2,4})15/,"$1"); // saca el 15 de celular si está después del código de área
+    d="549"+d;
+  }
+  return d.length>=12?d:null;
+}
+function compartirPedidoCliente(){
+  const l=lineasActuales();
+  if(!l.length){avisar("Cargá al menos un producto");return}
+  const cliente=val("cliente")||"";
+  const fecha=val("fecha")||new Date().toLocaleDateString("es-AR");
+  const t=totalesDe(l);
+  const hay=hayPrecios()&&t.neto>0;
+  let msg=cliente?`Hola *${cliente}*! 👋\n`:`¡Hola! 👋\n`;
+  msg+=`Resumen de tu pedido — ${fecha}\n\n`;
+  l.forEach(x=>{
+    const subtotal=x.unit*factorIva()*x.cant;
+    msg+=`• ${x.cant}x ${x.nombre}`;
+    if(hay)msg+=` — ${plata(Math.round(subtotal*100)/100)}`;
+    msg+=`\n`;
+  });
+  if(hay)msg+=`\n*Total: ${plata(t.total)}*\n`;
+  msg+=`\n¡Gracias por tu compra! 🌿`;
+  const numero=telWsp(val("tel"));
+  const url=numero
+    ?`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`
+    :`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+  if(!numero)avisar("No pude reconocer el teléfono, elegí el contacto a mano");
+  window.open(url,"_blank");
+}
 function aExcel(d,lineas,precios){
   const arch=`Pedido_${(d.cliente||"sin-cliente").replace(/[^\w\-]+/g,"_")}_${d.fecha||""}`;
   const conPlata=precios&&d.totales&&d.totales.neto>0;
