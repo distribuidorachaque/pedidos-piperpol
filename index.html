@@ -169,7 +169,9 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
       <div class="fila-sup">
         <div><label for="selCliente">Cliente guardado</label><select id="selCliente" onchange="cargarCliente(this.value)"></select></div>
         <button class="btn chico linea" onclick="nuevoCliente()">Cliente nuevo</button>
+        <button type="button" id="btnToggleDetalles" class="btn chico linea" onclick="toggleDetallesCliente()">▾ Detalles</button>
       </div>
+      <div id="detallesCliente" class="oculto">
       <div class="campos">
         <div><label for="cliente">Nombre o razón social</label><input id="cliente" placeholder="Farmacia San Martín"></div>
         <div><label for="tel">Teléfono</label><input id="tel" placeholder="(0351) ..."></div>
@@ -189,6 +191,8 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
       </div>
       <button class="btn chico linea" style="margin-top:10px" onclick="guardarSoloCliente()">💾 Guardar cliente (sin pedido)</button>
       <div style="margin-top:10px"><label for="obs">Observaciones</label><textarea id="obs" placeholder="Aclaraciones para preparar el pedido"></textarea></div>
+      </div>
+
     </div>
     <div class="buscador">
       <input id="q" placeholder="Buscar producto (ej: digestivo, boldo, stevia)" oninput="pintar()">
@@ -348,7 +352,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 05:45</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 06:35</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -528,6 +532,15 @@ function pintarSelector(){
     DB.clientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>`<option value="${c.id}">${esc(c.nombre)}${c.activo===false?" (inactivo)":""}</option>`).join("");
   s.value=clienteActivo||"";
 }
+function mostrarDetallesCliente(){
+  document.getElementById("detallesCliente").classList.remove("oculto");
+  document.getElementById("btnToggleDetalles").textContent="▴ Ocultar";
+}
+function toggleDetallesCliente(){
+  const el=document.getElementById("detallesCliente");
+  el.classList.toggle("oculto");
+  document.getElementById("btnToggleDetalles").textContent=el.classList.contains("oculto")?"▾ Detalles":"▴ Ocultar";
+}
 function cargarCliente(id){
   clienteActivo=id||null;
   const c=DB.clientes.find(x=>x.id===id);
@@ -536,12 +549,14 @@ function cargarCliente(id){
   if(c.entrega)set("entrega",c.entrega);
   if(c.facturado)set("facturado",c.facturado);
   geoActual=(c.lat!=null&&c.lng!=null)?{lat:c.lat,lng:c.lng}:null;
-  pintarGeoEstado();
+  pintarGeoEstado();mostrarDetallesCliente();
   avisar("Datos de "+c.nombre+" cargados");
 }
 function nuevoCliente(){
-  clienteActivo=null;geoActual=null;["cliente","tel","localidad","direccion"].forEach(i=>set(i,""));
-  pintarGeoEstado();pintarSelector();document.getElementById("cliente").focus();
+  clienteActivo=null;geoActual=null;
+  set("cliente","");set("tel","");set("direccion","");
+  set("localidad","Santa Fe Capital");
+  pintarGeoEstado();pintarSelector();mostrarDetallesCliente();document.getElementById("cliente").focus();
 }
 function pintarGeoEstado(){
   const el=document.getElementById("geoEstado");
@@ -572,6 +587,7 @@ async function guardarSoloCliente(){
   if(!val("cliente")){avisar("Falta el nombre del cliente");document.getElementById("cliente").focus();return}
   const c=await sincronizarCliente();
   avisar(`${c.nombre}: datos guardados`);
+  nuevoCliente();
 }
 function estadoVisita(c){
   if(c.activo===false)return{cls:"inactivo",txt:"Inactivo",dias:null};
@@ -620,7 +636,7 @@ function abrirVisitaRapida(){
   document.getElementById("listaVisitaDatalist").innerHTML=
     DB.clientes.map(c=>`<option value="${esc(c.nombre)}">`).join("");
   document.getElementById("visitaCliente").value="";
-  document.getElementById("visitaLocalidad").value="";
+  document.getElementById("visitaLocalidad").value="Santa Fe Capital";
   document.getElementById("visitaResultado").value="interesado";
   document.getElementById("dlgVisita").showModal();
 }
@@ -664,7 +680,13 @@ async function guardarPedido(){
   DB.pedidos.unshift({id:"p"+Date.now(),clienteId:c.id,...cabecera(),lineas:l,
     bultos:l.reduce((a,x)=>a+x.cant,0),totales:totalesDe(l),ivaPct:DB.config.iva,pagos:[]});
   l.forEach(x=>{ if(stockTrackeado(x.id)) DB.stock[x.id]=Math.max(0,DB.stock[x.id]-x.cant); });
-  await persistir();pintarStock();avisar("Pedido guardado en el historial");
+  await persistir();pintarStock();
+  avisar("Pedido guardado en el historial");
+  Object.keys(pedido).forEach(k=>delete pedido[k]);
+  set("obs","");
+  document.getElementById("fecha").valueAsDate=new Date();
+  nuevoCliente();
+  pintar();
 }
 function pintarHistorial(){
   const cont=document.getElementById("tablaHistorial");
@@ -698,7 +720,7 @@ function repetir(id){
   clienteActivo=p.clienteId;
   set("cliente",p.cliente);set("tel",p.tel);set("localidad",p.localidad);set("vendedor",p.vendedor);set("entrega",p.entrega);set("facturado",p.facturado||"no");set("obs",p.obs);
   document.getElementById("fecha").valueAsDate=new Date();
-  pintarSelector();ver("pedido");pintar();
+  pintarSelector();ver("pedido");mostrarDetallesCliente();pintar();
   avisar(recortados?`Pedido cargado, pero ${recortados} producto(s) se ajustaron por falta de stock`:"Pedido cargado para editar");
 }
 async function borrarPedido(id){
@@ -1063,6 +1085,7 @@ function restaurar(input){
 /* ================= arranque ================= */
 function arrancarUI(){
   set("cfgIva",DB.config.iva);set("cfgCom",DB.config.comision);set("cfgDias",DB.config.diasEntreVisitas??30);
+  set("localidad","Santa Fe Capital");
   pintarSelector();pintar();pintarPrecios();pintarNumeros();
 }
 (async()=>{
