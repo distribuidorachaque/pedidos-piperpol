@@ -90,6 +90,10 @@ td.acc button,td.acc a{margin-left:4px}
 .pill.pend{background:#fdece9;color:#a3341c}
 .pill.parc{background:#fdf5d6;color:#7a6410}
 .pill.cob{background:#e3f3e9;color:var(--verde)}
+.pill.visitar{background:#fdece9;color:#a3341c}
+.pill.nunca{background:#fdf5d6;color:#7a6410}
+.pill.aldia{background:#e3f3e9;color:var(--verde)}
+.pill.inactivo{background:#ece9e4;color:var(--gris)}
 .tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
 .kpi{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:14px 16px}
 .kpi .et{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);margin-bottom:6px}
@@ -217,7 +221,20 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
 <div id="v-clientes" class="pagina oculto">
   <div class="tarjeta">
     <h2>Clientes</h2>
-    <p class="sub">Se guardan solos cada vez que guardás un pedido.</p>
+    <p class="sub">Se guardan solos cada vez que guardás un pedido. Si pasaste por una farmacia y todavía no hay pedido, usá "Registrar visita".</p>
+    <button class="btn princ" style="margin-bottom:14px" onclick="abrirVisitaRapida()">📍 Registrar visita</button>
+    <div class="fila-sup">
+      <div style="flex:0 1 220px"><label for="cfgDias">Visitar cada (días)</label><input id="cfgDias" type="number" min="1" step="1" onchange="guardarConfig()"></div>
+      <div style="flex:0 1 220px"><label for="filtroVisita">Mostrar</label>
+        <select id="filtroVisita" onchange="pintarClientes()">
+          <option value="">Todos los clientes</option>
+          <option value="visitar">Para visitar</option>
+          <option value="aldia">Al día</option>
+          <option value="nunca">Nunca visitados</option>
+          <option value="inactivos">Inactivos</option>
+        </select>
+      </div>
+    </div>
     <div id="tablaClientes"></div>
   </div>
 </div>
@@ -296,6 +313,26 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
 </div>
 
 <!-- ============ COBROS ============ -->
+<dialog id="dlgVisita">
+  <div class="dlg-cab"><h3>Registrar visita</h3><p>Para dejar constancia aunque todavía no haya pedido.</p></div>
+  <div class="dlg-cuerpo">
+    <label for="visitaCliente">Farmacia</label>
+    <input id="visitaCliente" list="listaVisitaDatalist" placeholder="Nombre de la farmacia (nueva o ya guardada)">
+    <datalist id="listaVisitaDatalist"></datalist>
+    <div style="margin-top:10px"><label for="visitaLocalidad">Localidad</label><input id="visitaLocalidad" placeholder="Ciudad / zona (opcional)"></div>
+    <div style="margin-top:10px"><label for="visitaResultado">Resultado de la visita</label>
+      <select id="visitaResultado">
+        <option value="interesado">Interesado, todavía sin pedido</option>
+        <option value="no">No le interesa</option>
+      </select>
+    </div>
+  </div>
+  <div class="dlg-pie">
+    <button class="btn linea" onclick="document.getElementById('dlgVisita').close()">Cancelar</button>
+    <button class="btn princ" onclick="guardarVisitaRapida()">Guardar visita</button>
+  </div>
+</dialog>
+
 <dialog id="dlgPagos">
   <div class="dlg-cab"><h3 id="dlgTit">Cobros</h3><p id="dlgSub"></p></div>
   <div class="dlg-cuerpo">
@@ -310,7 +347,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 04:20</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 05:30</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -341,7 +378,7 @@ const porId=id=>PRODUCTOS.find(p=>p.id===id);
 
 /* ================= guardado ================= */
 const CLAVE="piperpol_datos_v2";
-let DB={clientes:[],pedidos:[],precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto"}};
+let DB={clientes:[],pedidos:[],precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto",diasEntreVisitas:30}};
 let guardaOk=true;
 const store={
   async leer(){
@@ -487,7 +524,7 @@ function totalesDe(lineas){
 function pintarSelector(){
   const s=document.getElementById("selCliente");
   s.innerHTML='<option value="">— Cliente nuevo —</option>'+
-    DB.clientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join("");
+    DB.clientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>`<option value="${c.id}">${esc(c.nombre)}${c.activo===false?" (inactivo)":""}</option>`).join("");
   s.value=clienteActivo||"";
 }
 function cargarCliente(id){
@@ -530,19 +567,71 @@ async function sincronizarCliente(){
   if(geoActual){c.lat=geoActual.lat;c.lng=geoActual.lng}
   clienteActivo=c.id;await persistir();pintarSelector();return c;
 }
+function estadoVisita(c){
+  if(c.activo===false)return{cls:"inactivo",txt:"Inactivo",dias:null};
+  if(!c.ultimaVisita)return{cls:"nunca",txt:"Nunca visitado",dias:null};
+  const ciclo=DB.config.diasEntreVisitas||30;
+  const dias=Math.floor((Date.now()-new Date(c.ultimaVisita+"T00:00:00").getTime())/86400000);
+  if(dias>=ciclo)return{cls:"visitar",txt:`Visitar · hace ${dias}d`,dias};
+  return{cls:"aldia",txt:`Al día · hace ${dias}d`,dias};
+}
 function pintarClientes(){
   const cont=document.getElementById("tablaClientes");
   if(!DB.clientes.length){cont.innerHTML=`<div class="vacio">Todavía no hay clientes. Se guardan solos al guardar un pedido.</div>`;return}
-  cont.innerHTML=`<table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Localidad</th><th class="num">Pedidos</th><th></th></tr></thead><tbody>`+
-    DB.clientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>{
+  const f=document.getElementById("filtroVisita").value;
+  let lista=DB.clientes.map(c=>({c,e:estadoVisita(c)}));
+  if(f==="visitar")lista=lista.filter(x=>x.e.cls==="visitar");
+  else if(f==="aldia")lista=lista.filter(x=>x.e.cls==="aldia");
+  else if(f==="nunca")lista=lista.filter(x=>x.e.cls==="nunca");
+  else if(f==="inactivos")lista=lista.filter(x=>x.e.cls==="inactivo");
+  lista.sort(f==="visitar"?(a,b)=>b.e.dias-a.e.dias:(a,b)=>a.c.nombre.localeCompare(b.c.nombre));
+  if(!lista.length){cont.innerHTML=`<div class="vacio">No hay clientes en este filtro.</div>`;return}
+  cont.innerHTML=`<table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Localidad</th><th>Visita</th><th></th></tr></thead><tbody>`+
+    lista.map(({c,e})=>{
       const n=DB.pedidos.filter(p=>p.clienteId===c.id).length;
       const linkMapa=c.lat!=null&&c.lng!=null?`https://www.google.com/maps?q=${c.lat},${c.lng}`
         :c.direccion?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.direccion+" "+(c.localidad||""))}`:null;
-      return `<tr><td><strong>${esc(c.nombre)}</strong>${c.direccion?`<br><small style="color:var(--gris)">${esc(c.direccion)}</small>`:""}</td><td>${esc(c.tel)||"—"}</td><td>${esc(c.localidad)||"—"}</td><td class="num">${n}</td>
-      <td class="acc">${linkMapa?`<a class="btn chico linea" href="${linkMapa}" target="_blank" rel="noopener">🗺️ Mapa</a>`:""}<button class="btn chico linea" onclick="pedidoPara('${c.id}')">Nuevo pedido</button>
+      return `<tr><td><strong>${esc(c.nombre)}</strong>${c.direccion?`<br><small style="color:var(--gris)">${esc(c.direccion)}</small>`:""}<br><small style="color:var(--gris)">${n} pedido${n===1?"":"s"}</small></td><td>${esc(c.tel)||"—"}</td><td>${esc(c.localidad)||"—"}</td>
+      <td><span class="pill ${e.cls}">${e.txt}</span></td>
+      <td class="acc">${linkMapa?`<a class="btn chico linea" href="${linkMapa}" target="_blank" rel="noopener">🗺️ Mapa</a>`:""}<button class="btn chico linea" onclick="marcarVisitado('${c.id}')">✓ Visitado hoy</button>
+      <button class="btn chico linea" onclick="pedidoPara('${c.id}')">Nuevo pedido</button>
+      <button class="btn chico linea" onclick="toggleActivoCliente('${c.id}')">${c.activo===false?"Reactivar":"Inactivar"}</button>
       <button class="btn chico rojo" onclick="borrarCliente('${c.id}')">Borrar</button></td></tr>`}).join("")+"</tbody></table>";
 }
+async function marcarVisitado(id){
+  const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  c.ultimaVisita=new Date().toISOString().slice(0,10);
+  await persistir();pintarClientes();avisar(`${c.nombre}: visita registrada hoy`);
+}
+async function toggleActivoCliente(id){
+  const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  c.activo=c.activo===false?true:false;
+  await persistir();pintarClientes();pintarSelector();
+  avisar(c.activo===false?`${c.nombre} marcado como inactivo`:`${c.nombre} reactivado`);
+}
 function pedidoPara(id){ver("pedido");document.getElementById("selCliente").value=id;cargarCliente(id)}
+function abrirVisitaRapida(){
+  document.getElementById("listaVisitaDatalist").innerHTML=
+    DB.clientes.map(c=>`<option value="${esc(c.nombre)}">`).join("");
+  document.getElementById("visitaCliente").value="";
+  document.getElementById("visitaLocalidad").value="";
+  document.getElementById("visitaResultado").value="interesado";
+  document.getElementById("dlgVisita").showModal();
+}
+async function guardarVisitaRapida(){
+  const nombre=document.getElementById("visitaCliente").value.trim();
+  if(!nombre){avisar("Poné el nombre de la farmacia");return}
+  let c=DB.clientes.find(x=>norm(x.nombre)===norm(nombre));
+  if(!c){c={id:"c"+Date.now(),nombre};DB.clientes.push(c)}else c.nombre=nombre;
+  const loc=document.getElementById("visitaLocalidad").value.trim();
+  if(loc)c.localidad=loc;
+  const resultado=document.getElementById("visitaResultado").value;
+  c.activo=resultado==="no"?false:true;
+  c.ultimaVisita=new Date().toISOString().slice(0,10);
+  await persistir();pintarClientes();pintarSelector();
+  document.getElementById("dlgVisita").close();
+  avisar(resultado==="no"?`${nombre}: marcado como no interesado`:`${nombre}: visita registrada`);
+}
 async function borrarCliente(id){
   const c=DB.clientes.find(x=>x.id===id);
   if(!confirm(`¿Borrar a ${c.nombre}? Los pedidos del historial se conservan.`))return;
@@ -565,6 +654,7 @@ async function guardarPedido(){
   if(!l.length){avisar("Cargá al menos un producto");return}
   if(!val("cliente")){avisar("Falta el nombre del cliente");document.getElementById("cliente").focus();return}
   const c=await sincronizarCliente();
+  c.ultimaVisita=val("fecha")||new Date().toISOString().slice(0,10);
   DB.pedidos.unshift({id:"p"+Date.now(),clienteId:c.id,...cabecera(),lineas:l,
     bultos:l.reduce((a,x)=>a+x.cant,0),totales:totalesDe(l),ivaPct:DB.config.iva,pagos:[]});
   l.forEach(x=>{ if(stockTrackeado(x.id)) DB.stock[x.id]=Math.max(0,DB.stock[x.id]-x.cant); });
@@ -654,7 +744,8 @@ async function quitarPago(i){
 function guardarConfig(){
   DB.config.iva=parseFloat(document.getElementById("cfgIva").value)||0;
   DB.config.comision=parseFloat(document.getElementById("cfgCom").value)||0;
-  persistir();pintar();pintarNumeros();
+  DB.config.diasEntreVisitas=parseInt(document.getElementById("cfgDias").value)||30;
+  persistir();pintar();pintarNumeros();pintarClientes();
 }
 function pintarPrecios(){
   const q=norm(val("qp")),r=selRubroP.value,m=selMarcaP.value;let html="";
@@ -955,7 +1046,7 @@ function restaurar(input){
       const d=JSON.parse(r.result);
       if(!d.clientes||!d.pedidos)throw 0;
       if(!confirm(`La copia tiene ${d.clientes.length} clientes y ${d.pedidos.length} pedidos. Reemplaza lo que hay ahora. ¿Seguir?`))return;
-      DB={precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto"},...d};
+      DB={precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto",diasEntreVisitas:30},...d};
       await persistir();arrancarUI();avisar("Copia restaurada");
     }catch(e){avisar("El archivo no es una copia válida")}
     input.value="";
@@ -965,13 +1056,13 @@ function restaurar(input){
 
 /* ================= arranque ================= */
 function arrancarUI(){
-  set("cfgIva",DB.config.iva);set("cfgCom",DB.config.comision);
+  set("cfgIva",DB.config.iva);set("cfgCom",DB.config.comision);set("cfgDias",DB.config.diasEntreVisitas??30);
   pintarSelector();pintar();pintarPrecios();pintarNumeros();
 }
 (async()=>{
   const d=await store.leer();
-  if(d&&d.clientes)DB={precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto"},...d,
-    config:{comision:15,iva:21,tipo:"neto",...(d.config||{})}};
+  if(d&&d.clientes)DB={precios:{},stock:{},config:{comision:15,iva:21,tipo:"neto",diasEntreVisitas:30},...d,
+    config:{comision:15,iva:21,tipo:"neto",diasEntreVisitas:30,...(d.config||{})}};
   if(!guardaOk)document.getElementById("alerta").classList.add("ver");
   arrancarUI();
 })();
