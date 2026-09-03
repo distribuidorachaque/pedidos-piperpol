@@ -187,6 +187,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
         </div>
         <div id="geoEstado" style="font-size:12px;color:var(--gris);margin-top:4px"></div>
       </div>
+      <button class="btn chico linea" style="margin-top:10px" onclick="guardarSoloCliente()">💾 Guardar cliente (sin pedido)</button>
       <div style="margin-top:10px"><label for="obs">Observaciones</label><textarea id="obs" placeholder="Aclaraciones para preparar el pedido"></textarea></div>
     </div>
     <div class="buscador">
@@ -347,7 +348,7 @@ dialog::backdrop{background:rgba(18,38,28,.45)}
   <div class="dlg-pie"><button class="btn linea" onclick="document.getElementById('dlgPagos').close()">Cerrar</button></div>
 </dialog>
 
-<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 05:30</footer>
+<footer style="text-align:center;padding:16px 10px 30px;color:var(--gris);font-size:11px">Versión 2026-08-25 · 05:45</footer>
 <div class="aviso" id="aviso"></div>
 
 <script>
@@ -566,6 +567,11 @@ async function sincronizarCliente(){
   c.nombre=nombre;c.tel=val("tel");c.localidad=val("localidad");c.direccion=val("direccion");c.entrega=val("entrega");c.facturado=val("facturado");
   if(geoActual){c.lat=geoActual.lat;c.lng=geoActual.lng}
   clienteActivo=c.id;await persistir();pintarSelector();return c;
+}
+async function guardarSoloCliente(){
+  if(!val("cliente")){avisar("Falta el nombre del cliente");document.getElementById("cliente").focus();return}
+  const c=await sincronizarCliente();
+  avisar(`${c.nombre}: datos guardados`);
 }
 function estadoVisita(c){
   if(c.activo===false)return{cls:"inactivo",txt:"Inactivo",dias:null};
